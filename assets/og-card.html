@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<style>
+			body {
+				margin: 0;
+				width: 1200px;
+				height: 630px;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				gap: 36px;
+				padding: 0 96px;
+				box-sizing: border-box;
+				background: #fcfcfb;
+				color: #0b0b0b;
+				font:
+					400 28px/1.4 system-ui,
+					sans-serif;
+			}
+			h1 {
+				margin: 0;
+				font-size: 64px;
+			}
+			p {
+				margin: 0;
+				color: #52514e;
+			}
+			.meter {
+				height: 28px;
+				border-radius: 8px;
+				background: #cde2fb;
+				overflow: hidden;
+			}
+			.fill {
+				width: 69%;
+				height: 100%;
+				background: #2a78d6;
+				border-radius: 0 8px 8px 0;
+			}
+			.strip {
+				display: flex;
+				align-items: flex-end;
+				gap: 10px;
+				height: 120px;
+			}
+			.bar {
+				width: 48px;
+				border-radius: 8px 8px 0 0;
+				background: #2a78d6;
+			}
+			.up {
+				background: #86b6ef;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Group Progress</h1>
+		<p>Sessions, hours and rhythm of a time-bounded group — shared as a link.</p>
+		<div class="meter"><div class="fill"></div></div>
+		<div class="strip">
+			<div class="bar" style="height: 55%"></div>
+			<div class="bar" style="height: 45%"></div>
+			<div class="bar" style="height: 70%"></div>
+			<div class="bar" style="height: 0"></div>
+			<div class="bar" style="height: 60%"></div>
+			<div class="bar up" style="height: 45%"></div>
+			<div class="bar up" style="height: 60%"></div>
+			<div class="bar up" style="height: 100%"></div>
+		</div>
+	</body>
+</html>
