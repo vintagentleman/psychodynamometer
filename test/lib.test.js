@@ -122,7 +122,7 @@ test('weekStartOf snaps to Monday', () => {
 	assert.deepEqual(weekStartOf(new Date(2026, 5, 15)), new Date(2026, 5, 15)); // Mon stays
 });
 
-test('weeklyBuckets spans first..last week, keeps empty weeks, tags status', () => {
+test('weeklyBuckets spans first..last week, keeps empty weeks, splits by now', () => {
 	const sessions = parseSessions([
 		{ date: '2026-06-02', start: '19:00', end: '22:00' }, // Tue, week of Jun 1, 3 h
 		{ date: '2026-06-18', start: '19:00', end: '23:00' }, // Thu, week of Jun 15, 4 h
@@ -130,16 +130,33 @@ test('weeklyBuckets spans first..last week, keeps empty weeks, tags status', () 
 	const buckets = weeklyBuckets(sessions, new Date(2026, 5, 10, 12, 0)); // Wed, week of Jun 8
 	assert.equal(buckets.length, 3);
 	assert.deepEqual(
-		buckets.map((b) => b.hours),
-		[3, 0, 4],
-	);
-	assert.deepEqual(
-		buckets.map((b) => b.status),
-		['past', 'current', 'future'],
+		buckets.map((b) => [b.doneHours, b.upcomingHours]),
+		[
+			[3, 0],
+			[0, 0],
+			[0, 4],
+		],
 	);
 	assert.deepEqual(buckets[0].weekStart, new Date(2026, 5, 1));
 	assert.deepEqual(buckets[1].weekStart, new Date(2026, 5, 8));
 	assert.deepEqual(buckets[2].weekStart, new Date(2026, 5, 15));
+});
+
+test('weeklyBuckets splits a week that straddles now into both segments', () => {
+	const sessions = parseSessions([
+		{ date: '2026-06-08', start: '10:00', end: '12:00' }, // Mon, 2 h — ended
+		{ date: '2026-06-12', start: '10:00', end: '13:00' }, // Fri, 3 h — upcoming
+	]);
+	const buckets = weeklyBuckets(sessions, new Date(2026, 5, 10, 12, 0)); // Wed same week
+	assert.equal(buckets.length, 1);
+	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [2, 3]);
+});
+
+test('weeklyBuckets counts a session ending in the future as upcoming even in the current week', () => {
+	// the exact shape of the reported bug: today Tue, session Thu same week
+	const sessions = parseSessions([{ date: '2026-07-23', start: '12:00', end: '15:00' }]);
+	const buckets = weeklyBuckets(sessions, new Date(2026, 6, 21, 12, 0)); // Tue 21 Jul
+	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [0, 3]);
 });
 
 test('weeklyBuckets of nothing is empty', () => {

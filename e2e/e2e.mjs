@@ -90,7 +90,26 @@ const zeroBars = await page.$$eval(
 	(els) => els.filter((el) => el.style.height === '0px' || el.style.height === '0').length,
 );
 check('empty week visible as gap', zeroBars === 1, `${zeroBars} zero-height bars`);
-check('today divider present mid-strip', (await page.$$('.today-divider')).length === 1);
+check('no today divider exists', (await page.$$('.today-divider')).length === 0);
+// week of 20 Jul contains only the future 23 Jul session — must NOT read as done
+check(
+	'current week with only future sessions renders upcoming',
+	await page.$eval(
+		'.strip .bar:nth-child(8)',
+		(bar) => bar.querySelector('.seg.done') === null && bar.querySelector('.seg.upcoming') !== null,
+	),
+);
+check('done segments in 6 weeks', (await page.$$('.strip .bar .seg.done')).length === 6);
+check('upcoming segments in 3 weeks', (await page.$$('.strip .bar .seg.upcoming')).length === 3);
+const axisLabels = await page.$$eval('.axis .axis-cell', (cells) =>
+	cells.map((cell) => cell.textContent).filter((text) => text !== ''),
+);
+check(
+	'month labels under month-first weeks',
+	axisLabels.join(',') === 'Jun,Jul,Aug',
+	axisLabels.join(','),
+);
+check('axis mirrors bucket count', (await page.$$('.axis .axis-cell')).length === 10);
 const rows = await page.$$('.sessions .session');
 check('schedule rows = 11', rows.length === 11, `got ${rows.length}`);
 check('past rows marked', (await page.$$('.sessions .session.past')).length === 7);
@@ -187,7 +206,7 @@ const futureOnly = encodeGroup({
 	],
 });
 await page.goto(`${BASE}/#d=${futureOnly}`);
-check('all-future: no edge divider', (await page.$$('.today-divider')).length === 0);
+check('all-future: only upcoming segments', (await page.$$('.strip .seg.done')).length === 0);
 const geo = await page.$eval('.strip', (strip) => {
 	const stripBars = [...strip.querySelectorAll('.bar')];
 	const sr = strip.getBoundingClientRect();
@@ -200,7 +219,10 @@ check(
 	geo.leftGap < 2 && geo.rightGap < 2,
 	`leftGap=${geo.leftGap.toFixed(1)} rightGap=${geo.rightGap.toFixed(1)}`,
 );
-const upColor = await page.$eval('.strip .bar', (b) => getComputedStyle(b).backgroundColor);
+const upColor = await page.$eval(
+	'.strip .seg.upcoming',
+	(b) => getComputedStyle(b).backgroundColor,
+);
 check('upcoming mark contrast raised', upColor === 'rgb(85, 152, 231)', upColor);
 
 const pastOnly = encodeGroup({
@@ -212,7 +234,30 @@ const pastOnly = encodeGroup({
 	],
 });
 await page.goto(`${BASE}/#d=${pastOnly}`);
-check('all-past: no edge divider', (await page.$$('.today-divider')).length === 0);
+check('all-past: only done segments', (await page.$$('.strip .seg.upcoming')).length === 0);
+
+// a week straddling "now" (frozen Tue 21 Jul): Mon session done, Thu session upcoming
+const mixedWeek = encodeGroup({
+	title: 'M',
+	targetHours: 10,
+	sessions: [
+		{ date: '2026-07-20', start: '10:00', end: '11:00' },
+		{ date: '2026-07-23', start: '12:00', end: '15:00' },
+	],
+});
+await page.goto(`${BASE}/#d=${mixedWeek}`);
+check(
+	'mixed week stacks upcoming over done',
+	await page.$eval(
+		'.strip .bar',
+		(bar) =>
+			bar.querySelectorAll('.seg').length === 2 &&
+			bar.firstElementChild !== null &&
+			bar.firstElementChild.className.includes('upcoming') &&
+			bar.lastElementChild !== null &&
+			bar.lastElementChild.className.includes('done'),
+	),
+);
 
 // --- Desktop two-pane layout ---
 await page.setViewportSize({ width: 1280, height: 900 });

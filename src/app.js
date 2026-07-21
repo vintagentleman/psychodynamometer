@@ -68,6 +68,18 @@ function slot(root, selector) {
 	return /** @type {HTMLElement} */ (root.querySelector(selector));
 }
 
+/**
+ * One stacked segment of a rhythm bar, sized as a fraction of the bar.
+ * @param {'done' | 'upcoming'} kind
+ * @param {number} fraction
+ */
+function segment(kind, fraction) {
+	const seg = /** @type {HTMLElement} */ (cloneTemplate('tpl-seg').firstElementChild);
+	seg.classList.add(kind);
+	seg.style.height = `${fraction * 100}%`;
+	return seg;
+}
+
 function currentPayload() {
 	const match = location.hash.match(/^#d=(.+)$/);
 	return match ? match[1] : null;
@@ -113,7 +125,7 @@ function viewFragment(data, now, withFooter = false) {
 	);
 	const next = findNextSession(sessions, now);
 	const buckets = weeklyBuckets(sessions, now);
-	const maxWeekHours = Math.max(...buckets.map((b) => b.hours), 1);
+	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
 
 	const fragment = cloneTemplate('tpl-view');
 	slot(fragment, 'h1').textContent = data.title;
@@ -136,25 +148,34 @@ function viewFragment(data, now, withFooter = false) {
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
 	const strip = slot(fragment, '.strip');
-	const firstFuture = buckets.findIndex((bucket) => bucket.status === 'future');
-	buckets.forEach((bucket, index) => {
-		// The divider renders only when it separates done from upcoming — at
-		// either edge it collides with the month labels and adds nothing the
-		// bar colors don't already say.
-		if (index === firstFuture && firstFuture > 0) strip.appendChild(cloneTemplate('tpl-divider'));
+	const axis = slot(fragment, '.axis');
+	let previousMonth = '';
+	for (const bucket of buckets) {
+		const total = bucket.doneHours + bucket.upcomingHours;
 		const bar = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
-		bar.classList.add(bucket.status === 'future' ? 'upcoming' : 'done');
 		bar.style.height =
-			bucket.hours === 0 ? '0' : `${Math.max(8, Math.round((bucket.hours / maxWeekHours) * 100))}%`;
+			total === 0 ? '0' : `${Math.max(8, Math.round((total / maxWeekHours) * 100))}%`;
+		// Upcoming stacks on top of done; the color boundary is "now", so no
+		// separate today marker is needed (or possible to misplace).
+		if (bucket.upcomingHours > 0) {
+			bar.appendChild(segment('upcoming', bucket.upcomingHours / total));
+		}
+		if (bucket.doneHours > 0) {
+			bar.appendChild(segment('done', bucket.doneHours / total));
+		}
 		bar.title = `${formatDateShort(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
-			hours: formatHoursNum(bucket.hours, locale),
+			hours: formatHoursNum(total, locale),
 		})}`;
 		strip.appendChild(bar);
-	});
-	slot(fragment, '.axis-start').textContent =
-		buckets.length > 0 ? formatMonth(buckets[0].weekStart, locale) : '';
-	slot(fragment, '.axis-end').textContent =
-		buckets.length > 0 ? formatMonth(buckets[buckets.length - 1].weekStart, locale) : '';
+
+		// Month label under the first week of each month — the axis mirrors
+		// the strip's slot layout so labels sit beneath their bars.
+		const cell = /** @type {HTMLElement} */ (cloneTemplate('tpl-axis-cell').firstElementChild);
+		const month = formatMonth(bucket.weekStart, locale);
+		if (month !== previousMonth) cell.textContent = month;
+		previousMonth = month;
+		axis.appendChild(cell);
+	}
 
 	const list = slot(fragment, '.sessions');
 	for (const session of sessions) {
