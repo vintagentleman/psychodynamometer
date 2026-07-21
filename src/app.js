@@ -96,20 +96,6 @@ function langToggleFragment() {
 	return fragment;
 }
 
-/** @param {() => void} rerender */
-function wireLangToggle(rerender) {
-	for (const button of app.querySelectorAll('button.lang')) {
-		button.addEventListener('click', () => {
-			const lang = /** @type {HTMLElement} */ (button).dataset.lang;
-			if (lang !== 'en' && lang !== 'ru') return;
-			locale = lang;
-			storeLang(lang);
-			document.documentElement.lang = lang;
-			rerender();
-		});
-	}
-}
-
 /**
  * The dashboard for one group, cloned from #tpl-view.
  * @param {GroupData} data
@@ -209,13 +195,6 @@ function viewFragment(data, now, withFooter = false) {
 	return fragment;
 }
 
-/** @param {GroupData} data */
-function renderView(data) {
-	app.replaceChildren(langToggleFragment(), viewFragment(data, new Date(), true));
-	wireLangToggle(() => renderView(data));
-	slot(app, '#edit').addEventListener('click', () => renderBuild(data, false));
-}
-
 /** @param {SessionInput} input */
 function sessionRow(input) {
 	const fragment = cloneTemplate('tpl-form-row');
@@ -253,11 +232,16 @@ function isComplete(draft) {
 	);
 }
 
+/** @type {{ mode: 'view' | 'build', data: GroupData | null, badLink: boolean }} */
+let state = { mode: 'build', data: null, badLink: false };
+
 /**
+ * Build (but do not wire) the group-builder form, cloned from #tpl-build.
  * @param {GroupData | null} data
  * @param {boolean} badLink
+ * @returns {DocumentFragment}
  */
-function renderBuild(data, badLink) {
+function buildFragment(data, badLink) {
 	const fragment = cloneTemplate('tpl-build');
 	if (badLink) slot(fragment, '.note-badlink').hidden = false;
 	else slot(fragment, '.note-badlink').remove();
@@ -269,86 +253,150 @@ function renderBuild(data, badLink) {
 	/** @type {HTMLInputElement} */ (slot(fragment, '[name="title"]')).value = data?.title ?? '';
 	/** @type {HTMLInputElement} */ (slot(fragment, '[name="targetHours"]')).value =
 		data !== null && data.targetHours > 0 ? String(data.targetHours) : '';
+	return fragment;
+}
 
-	app.replaceChildren(langToggleFragment(), fragment);
-
-	const form = /** @type {HTMLFormElement} */ (app.querySelector('#build'));
+/**
+ * Refresh the builder's per-row validity flags and live preview from the
+ * current form values. The one surgical update we keep: the form inputs must
+ * survive untouched — rebuilding them would drop the caret mid-type — so only
+ * #preview and the row classes change here, never the inputs themselves.
+ */
+function update() {
 	const liveRows = slot(app, '#rows');
 	const preview = slot(app, '#preview');
-	const copyButton = /** @type {HTMLButtonElement} */ (app.querySelector('#copy-link'));
-	wireLangToggle(() => renderBuild(readForm(), badLink));
+	for (const row of liveRows.querySelectorAll('.row')) {
+		const inputs = row.querySelectorAll('input');
+		const [date, start, end] = [...inputs].map((input) => input.value);
+		const filled = date !== '' && start !== '' && end !== '';
+		row.classList.toggle('invalid', filled && parseSession({ date, start, end }) === null);
+	}
+	const draft = readForm();
+	if (isComplete(draft)) preview.replaceChildren(viewFragment(draft, new Date()));
+	else preview.replaceChildren(cloneTemplate('tpl-hint'));
+}
 
-	const update = () => {
-		for (const row of liveRows.querySelectorAll('.row')) {
-			const inputs = row.querySelectorAll('input');
-			const [date, start, end] = [...inputs].map((input) => input.value);
-			const filled = date !== '' && start !== '' && end !== '';
-			row.classList.toggle('invalid', filled && parseSession({ date, start, end }) === null);
-		}
-		const draft = readForm();
-		if (isComplete(draft)) preview.replaceChildren(viewFragment(draft, new Date()));
-		else preview.replaceChildren(cloneTemplate('tpl-hint'));
-	};
+/**
+ * Rebuild #app's children from state. Handlers live on #app itself (wired
+ * once in wireApp) and #app survives every replaceChildren, so nothing here
+ * re-attaches anything.
+ */
+function render() {
+	if (state.mode === 'view' && state.data !== null) {
+		app.replaceChildren(langToggleFragment(), viewFragment(state.data, new Date(), true));
+	} else {
+		app.replaceChildren(langToggleFragment(), buildFragment(state.data, state.badLink));
+		update();
+	}
+}
 
-	form.addEventListener('input', update);
-	slot(app, '#add-row').addEventListener('click', () => {
-		liveRows.appendChild(sessionRow({ date: '', start: '', end: '' }));
-		update();
-	});
-	liveRows.addEventListener('click', (event) => {
-		const target = /** @type {HTMLElement} */ (event.target);
-		if (target.closest('.remove') && liveRows.querySelectorAll('.row').length > 1) {
-			target.closest('.row')?.remove();
-			update();
-		}
-	});
-	copyButton.addEventListener('click', () => {
-		update();
-		const draft = readForm();
-		let blocked = false;
-		for (const row of liveRows.querySelectorAll('.row')) {
-			const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
-			const empty = date === '' && start === '' && end === '';
-			const bad = !empty && parseSession({ date, start, end }) === null;
-			row.classList.toggle('invalid', bad);
-			blocked ||= bad;
-		}
-		const cleaned = {
-			...draft,
-			sessions: draft.sessions.filter((s) => !(s.date === '' && s.start === '' && s.end === '')),
-		};
-		if (blocked || !isComplete(cleaned)) return;
-		const url = `${location.origin}${location.pathname}#d=${encodeGroup(cleaned)}`;
-		navigator.clipboard
-			.writeText(url)
-			.then(() => {
-				copyButton.textContent = t(locale, 'copied');
-				setTimeout(() => {
-					copyButton.textContent = t(locale, 'copyLink');
-				}, 1500);
-			})
-			.catch(() => {});
-	});
+/**
+ * Validate the builder, and on success copy a share link to the clipboard.
+ * @param {HTMLButtonElement} copyButton
+ */
+function copyLink(copyButton) {
 	update();
+	const liveRows = slot(app, '#rows');
+	const draft = readForm();
+	let blocked = false;
+	for (const row of liveRows.querySelectorAll('.row')) {
+		const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
+		const empty = date === '' && start === '' && end === '';
+		const bad = !empty && parseSession({ date, start, end }) === null;
+		row.classList.toggle('invalid', bad);
+		blocked ||= bad;
+	}
+	const cleaned = {
+		...draft,
+		sessions: draft.sessions.filter((s) => !(s.date === '' && s.start === '' && s.end === '')),
+	};
+	if (blocked || !isComplete(cleaned)) return;
+	const url = `${location.origin}${location.pathname}#d=${encodeGroup(cleaned)}`;
+	navigator.clipboard
+		.writeText(url)
+		.then(() => {
+			copyButton.textContent = t(locale, 'copied');
+			setTimeout(() => {
+				copyButton.textContent = t(locale, 'copyLink');
+			}, 1500);
+		})
+		.catch(() => {});
+}
+
+/**
+ * Wire every handler once, on the stable #app root. Each render replaces
+ * #app's children but never #app, so this delegation outlives all of them.
+ */
+function wireApp() {
+	app.addEventListener('click', (event) => {
+		const target = /** @type {HTMLElement} */ (event.target);
+
+		const langButton = target.closest('button.lang');
+		if (langButton !== null) {
+			const lang = /** @type {HTMLElement} */ (langButton).dataset.lang;
+			if (lang !== 'en' && lang !== 'ru') return;
+			locale = lang;
+			storeLang(lang);
+			document.documentElement.lang = lang;
+			// Capture what's typed so switching language mid-build keeps it.
+			if (state.mode === 'build') state = { ...state, data: readForm() };
+			render();
+			return;
+		}
+
+		if (state.mode === 'view') {
+			if (target.closest('#edit') !== null) {
+				state = { mode: 'build', data: state.data, badLink: false };
+				render();
+			}
+			return;
+		}
+
+		if (target.closest('#add-row') !== null) {
+			slot(app, '#rows').appendChild(sessionRow({ date: '', start: '', end: '' }));
+			update();
+			return;
+		}
+		const removeButton = target.closest('.remove');
+		if (removeButton !== null) {
+			const liveRows = slot(app, '#rows');
+			if (liveRows.querySelectorAll('.row').length > 1) {
+				removeButton.closest('.row')?.remove();
+				update();
+			}
+			return;
+		}
+		const copyButton = target.closest('#copy-link');
+		if (copyButton !== null) copyLink(/** @type {HTMLButtonElement} */ (copyButton));
+	});
+
+	app.addEventListener('input', () => {
+		if (state.mode === 'build') update();
+	});
 }
 
 function route() {
 	const payload = currentPayload();
 	if (payload === null) {
-		renderBuild(null, false);
+		state = { mode: 'build', data: null, badLink: false };
+		render();
 		return;
 	}
 	const data = decodeGroup(payload);
 	if (data === null) {
-		renderBuild(null, true);
+		state = { mode: 'build', data: null, badLink: true };
+		render();
 		return;
 	}
+	state = { mode: 'view', data, badLink: false };
 	try {
-		renderView(data);
+		render();
 	} catch {
-		renderBuild(null, true);
+		state = { mode: 'build', data: null, badLink: true };
+		render();
 	}
 }
 
 window.addEventListener('hashchange', route);
+wireApp();
 route();
