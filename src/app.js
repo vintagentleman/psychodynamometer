@@ -1,5 +1,7 @@
 import {
 	decodeGroup,
+	encodeGroup,
+	parseSession,
 	parseSessions,
 	computeProgress,
 	findNextSession,
@@ -12,6 +14,7 @@ import {
 import { resolveLocale, t } from './i18n.js';
 
 /** @typedef {import('./lib.js').GroupData} GroupData */
+/** @typedef {import('./lib.js').SessionInput} SessionInput */
 
 const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
 let locale = resolveLocale(navigator.language, null);
@@ -141,18 +144,119 @@ function renderView(data) {
 	);
 }
 
+/** @param {SessionInput} input */
+function sessionRowHTML(input) {
+	return `<div class="row">
+		<input type="date" name="date" value="${esc(input.date)}" aria-label="${t(locale, 'date')}" />
+		<input type="time" name="start" value="${esc(input.start)}" aria-label="${t(locale, 'start')}" />
+		<input type="time" name="end" value="${esc(input.end)}" aria-label="${t(locale, 'end')}" />
+		<button type="button" class="remove" aria-label="${t(locale, 'remove')}">×</button>
+	</div>`;
+}
+
 /**
- * Minimal fallback — the full form replaces this in the build-mode task.
+ * Read the form back into (possibly incomplete) group data.
+ * @returns {GroupData}
+ */
+function readForm() {
+	const form = /** @type {HTMLFormElement} */ (app.querySelector('#build'));
+	const formData = new FormData(form);
+	const dates = formData.getAll('date');
+	const starts = formData.getAll('start');
+	const ends = formData.getAll('end');
+	return {
+		v: 1,
+		title: String(formData.get('title') ?? ''),
+		targetHours: Number(formData.get('targetHours') ?? 0) || 0,
+		sessions: dates.map((date, i) => ({
+			date: String(date),
+			start: String(starts[i] ?? ''),
+			end: String(ends[i] ?? ''),
+		})),
+	};
+}
+
+/** @param {GroupData} draft */
+function isComplete(draft) {
+	return (
+		draft.title.trim() !== '' && draft.targetHours > 0 && parseSessions(draft.sessions).length > 0
+	);
+}
+
+/**
  * @param {GroupData | null} data
  * @param {boolean} badLink
  */
 function renderBuild(data, badLink) {
-	void data;
+	const rows =
+		data !== null && data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
 	app.innerHTML = `
 		<article class="page build">
 			<header class="masthead"><h1>${t(locale, 'buildTitle')}</h1></header>
 			${badLink ? `<p class="note">${t(locale, 'badLink')}</p>` : ''}
+			<form id="build" class="block">
+				<label class="field">${t(locale, 'groupName')}<input name="title" value="${esc(data?.title ?? '')}" /></label>
+				<label class="field">${t(locale, 'targetHours')}<input name="targetHours" type="number" min="0" step="0.5" value="${
+					data !== null && data.targetHours > 0 ? esc(data.targetHours) : ''
+				}" /></label>
+				<fieldset>
+					<legend>${t(locale, 'sessions')}</legend>
+					<div id="rows">${rows.map(sessionRowHTML).join('')}</div>
+					<button type="button" class="ghost" id="add-row">${t(locale, 'addSession')}</button>
+				</fieldset>
+				<button type="button" id="copy-link">${t(locale, 'copyLink')}</button>
+			</form>
+			<h2 class="label preview-label">${t(locale, 'preview')}</h2>
+			<div id="preview"></div>
 		</article>`;
+
+	const form = /** @type {HTMLFormElement} */ (app.querySelector('#build'));
+	const rowsBox = /** @type {HTMLElement} */ (app.querySelector('#rows'));
+	const preview = /** @type {HTMLElement} */ (app.querySelector('#preview'));
+	const copyButton = /** @type {HTMLButtonElement} */ (app.querySelector('#copy-link'));
+
+	const update = () => {
+		for (const row of rowsBox.querySelectorAll('.row')) {
+			const inputs = row.querySelectorAll('input');
+			const [date, start, end] = [...inputs].map((input) => input.value);
+			const filled = date !== '' && start !== '' && end !== '';
+			row.classList.toggle('invalid', filled && parseSession({ date, start, end }) === null);
+		}
+		const draft = readForm();
+		preview.innerHTML = isComplete(draft)
+			? viewHTML(draft, new Date())
+			: `<p class="note">${t(locale, 'previewHint')}</p>`;
+	};
+
+	form.addEventListener('input', update);
+
+	/** @type {HTMLElement} */ (app.querySelector('#add-row')).addEventListener('click', () => {
+		rowsBox.insertAdjacentHTML('beforeend', sessionRowHTML({ date: '', start: '', end: '' }));
+		update();
+	});
+
+	rowsBox.addEventListener('click', (event) => {
+		const target = /** @type {HTMLElement} */ (event.target);
+		if (target.closest('.remove') && rowsBox.querySelectorAll('.row').length > 1) {
+			target.closest('.row')?.remove();
+			update();
+		}
+	});
+
+	copyButton.addEventListener('click', () => {
+		const draft = readForm();
+		update();
+		if (!isComplete(draft)) return;
+		const url = `${location.origin}${location.pathname}#d=${encodeGroup(draft)}`;
+		navigator.clipboard.writeText(url).then(() => {
+			copyButton.textContent = t(locale, 'copied');
+			setTimeout(() => {
+				copyButton.textContent = t(locale, 'copyLink');
+			}, 1500);
+		});
+	});
+
+	update();
 }
 
 function route() {
