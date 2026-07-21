@@ -147,3 +147,48 @@ export function weeklyBuckets(sessions, now) {
 	}
 	return buckets;
 }
+
+/** @type {Record<string, string>} */
+const DATE_LOCALES = { en: 'en-GB', ru: 'ru' };
+
+/**
+ * @param {Date} date
+ * @param {string} locale
+ */
+export function formatDateShort(date, locale) {
+	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+	}).format(date);
+}
+
+/**
+ * @param {Date} date
+ * @param {string} locale
+ */
+export function formatDateLong(date, locale) {
+	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long',
+	}).format(date);
+}
+
+/**
+ * @param {Date} date
+ * @param {string} locale
+ */
+export function formatMonth(date, locale) {
+	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, { month: 'short' }).format(date);
+}
+
+/**
+ * @param {number} hours
+ * @param {string} locale
+ */
+export function formatHoursNum(hours, locale) {
+	return new Intl.NumberFormat(DATE_LOCALES[locale] ?? locale, {
+		maximumFractionDigits: 1,
+	}).format(hours);
+}

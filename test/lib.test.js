@@ -138,3 +138,21 @@ test('weeklyBuckets spans first..last week, keeps empty weeks, tags status', () 
 test('weeklyBuckets of nothing is empty', () => {
 	assert.deepEqual(weeklyBuckets([], new Date()), []);
 });
+
+import { formatDateShort, formatDateLong, formatMonth, formatHoursNum } from '../src/lib.js';
+
+test('dates render spelled out, never numeric-ambiguous', () => {
+	const thu = new Date(2026, 5, 18);
+	assert.equal(formatDateShort(thu, 'en'), 'Thu 18 Jun');
+	assert.equal(formatDateShort(thu, 'ru'), 'чт, 18 июн.');
+	const jul = new Date(2026, 6, 23);
+	assert.equal(formatDateLong(jul, 'en'), 'Thursday 23 July');
+	assert.equal(formatDateLong(jul, 'ru'), 'четверг, 23 июля');
+	assert.equal(formatMonth(thu, 'en'), 'Jun');
+});
+
+test('hours localise decimal separators', () => {
+	assert.equal(formatHoursNum(28.5, 'en'), '28.5');
+	assert.equal(formatHoursNum(28.5, 'ru'), '28,5');
+	assert.equal(formatHoursNum(4, 'en'), '4');
+});
