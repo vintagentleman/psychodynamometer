@@ -1,59 +1,54 @@
 /** @typedef {{ date: string, start: string, end: string }} SessionInput */
-/** @typedef {{ v: 1, title: string, targetHours: number, sessions: SessionInput[] }} GroupData */
+/** @typedef {{ title: string, targetHours: number, sessions: SessionInput[] }} GroupData */
+
+const SESSION_TOKEN = /^(\d{2})(\d{2})(\d{2})\.(\d{2})(\d{2})\.(\d{2})(\d{2})$/;
 
 /**
- * Encode group data as URL-safe base64 (UTF-8 safe — titles may be Cyrillic).
+ * Encode group data as a compact URL-fragment-safe string (schema 2):
+ * `2~<targetHours>~<sessions>~<title>`. Sessions are `_`-joined
+ * `YYMMDD.HHMM.HHMM`; the title is percent-encoded and kept LAST so an
+ * embedded `~` cannot break parsing (the decoder rejoins the tail).
  * @param {GroupData} data
  * @returns {string}
  */
 export function encodeGroup(data) {
-	const bytes = new TextEncoder().encode(JSON.stringify(data));
-	let binary = '';
-	for (const byte of bytes) binary += String.fromCharCode(byte);
-	return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+	const sessions = data.sessions
+		.map(
+			(s) =>
+				`${s.date.replaceAll('-', '').slice(2)}.${s.start.replace(':', '')}.${s.end.replace(':', '')}`,
+		)
+		.join('_');
+	return `2~${data.targetHours}~${sessions}~${encodeURIComponent(data.title)}`;
 }
 
 /**
- * @param {unknown} session
- * @returns {boolean}
- */
-function isValidSessionShape(session) {
-	if (session === null || typeof session !== 'object') return false;
-	const candidate = /** @type {Record<string, unknown>} */ (session);
-	return (
-		typeof candidate.date === 'string' &&
-		typeof candidate.start === 'string' &&
-		typeof candidate.end === 'string'
-	);
-}
-
-/**
- * Decode a hash payload back into group data. Null on any malformation.
+ * Decode a schema-2 payload back into group data. Null on any malformation.
  * @param {string} payload
  * @returns {GroupData | null}
  */
 export function decodeGroup(payload) {
-	try {
-		const binary = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
-		const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-		const data = JSON.parse(new TextDecoder().decode(bytes));
-		if (
-			data === null ||
-			typeof data !== 'object' ||
-			data.v !== 1 ||
-			typeof data.title !== 'string' ||
-			typeof data.targetHours !== 'number' ||
-			!Number.isFinite(data.targetHours) ||
-			data.targetHours < 0 ||
-			!Array.isArray(data.sessions) ||
-			!data.sessions.every(isValidSessionShape)
-		) {
-			return null;
+	const [version, target, sessionField, ...titleParts] = payload.split('~');
+	if (version !== '2' || sessionField === undefined || titleParts.length === 0) return null;
+	if (target === '') return null;
+	const targetHours = Number(target);
+	if (!Number.isFinite(targetHours) || targetHours < 0) return null;
+	/** @type {SessionInput[]} */
+	const sessions = [];
+	if (sessionField !== '') {
+		for (const token of sessionField.split('_')) {
+			const match = SESSION_TOKEN.exec(token);
+			if (match === null) return null;
+			const [, yy, mo, dd, sh, sm, eh, em] = match;
+			sessions.push({ date: `20${yy}-${mo}-${dd}`, start: `${sh}:${sm}`, end: `${eh}:${em}` });
 		}
-		return data;
+	}
+	let title;
+	try {
+		title = decodeURIComponent(titleParts.join('~'));
 	} catch {
 		return null;
 	}
+	return { title, targetHours, sessions };
 }
 
 /** @typedef {SessionInput & { startDT: Date, endDT: Date, hours: number }} Session */

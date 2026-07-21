@@ -3,35 +3,42 @@ import assert from 'node:assert/strict';
 import { encodeGroup, decodeGroup } from '../src/lib.js';
 
 /** @type {import('../src/lib.js').GroupData} */
-const cyrillic = {
-	v: 1,
-	title: 'Группа «Вторник»',
+const group = {
+	title: 'Группа «Вторник» ~_.%',
 	targetHours: 41.5,
-	sessions: [{ date: '2026-06-02', start: '19:00', end: '22:30' }],
+	sessions: [
+		{ date: '2026-06-02', start: '19:00', end: '22:30' },
+		{ date: '2026-08-09', start: '08:00', end: '16:00' },
+	],
 };
 
-test('codec round-trips cyrillic data', () => {
-	assert.deepEqual(decodeGroup(encodeGroup(cyrillic)), cyrillic);
+test('codec round-trips cyrillic and separator characters', () => {
+	assert.deepEqual(decodeGroup(encodeGroup(group)), group);
 });
 
-test('encoded payload is url-safe (no +, /, =)', () => {
-	assert.match(encodeGroup(cyrillic), /^[A-Za-z0-9_-]+$/);
+test('payload is compact and fragment-safe', () => {
+	const payload = encodeGroup(group);
+	assert.match(payload, /^2~41\.5~260602\.1900\.2230_260809\.0800\.1600~/);
+	assert.doesNotMatch(payload, /[^A-Za-z0-9~._%!*'()-]/);
 });
 
-test('decode returns null on garbage', () => {
-	assert.equal(decodeGroup('%%%not-base64%%%'), null);
+test('empty sessions encode to an empty field', () => {
+	const decoded = decodeGroup(encodeGroup({ ...group, sessions: [] }));
+	assert.ok(decoded);
+	assert.deepEqual(decoded.sessions, []);
 });
 
-test('decode returns null on valid base64 of non-JSON', () => {
-	assert.equal(decodeGroup(btoa('not json')), null);
-});
-
-test('decode returns null on wrong shape', () => {
-	assert.equal(decodeGroup(btoa(JSON.stringify({ v: 1 }))), null);
-});
-
-test('decode returns null on unknown version', () => {
-	assert.equal(decodeGroup(encodeGroup(/** @type {*} */ ({ ...cyrillic, v: 2 }))), null);
+test('decode returns null on malformed payloads', () => {
+	assert.equal(decodeGroup('garbage'), null);
+	assert.equal(decodeGroup('eyJ2IjoxfQ'), null); // old v1 base64url blob
+	assert.equal(decodeGroup('1~10~~t'), null); // unknown version
+	assert.equal(decodeGroup('2~10'), null); // missing fields
+	assert.equal(decodeGroup('2~~260602.1900.2230~t'), null); // empty target
+	assert.equal(decodeGroup('2~1e999~260602.1900.2230~t'), null); // non-finite target
+	assert.equal(decodeGroup('2~-5~260602.1900.2230~t'), null); // negative target
+	assert.equal(decodeGroup('2~10~26060.1900.2230~t'), null); // short date token
+	assert.equal(decodeGroup('2~10~260602.1900~t'), null); // missing end time
+	assert.equal(decodeGroup('2~10~~%E0%A4%A'), null); // broken percent-encoding
 });
 
 import { parseSession, parseSessions, computeProgress } from '../src/lib.js';
@@ -155,42 +162,4 @@ test('hours localise decimal separators', () => {
 	assert.equal(formatHoursNum(28.5, 'en'), '28.5');
 	assert.equal(formatHoursNum(28.5, 'ru'), '28,5');
 	assert.equal(formatHoursNum(4, 'en'), '4');
-});
-
-test('decode returns null on non-object session elements', () => {
-	assert.equal(
-		decodeGroup(btoa(JSON.stringify({ v: 1, title: 'x', targetHours: 10, sessions: [null] }))),
-		null,
-	);
-	assert.equal(
-		decodeGroup(btoa(JSON.stringify({ v: 1, title: 'x', targetHours: 10, sessions: [42] }))),
-		null,
-	);
-});
-
-test('decode returns null on session missing start/end', () => {
-	assert.equal(
-		decodeGroup(
-			btoa(
-				JSON.stringify({
-					v: 1,
-					title: 'x',
-					targetHours: 10,
-					sessions: [{ date: '2026-01-01' }],
-				}),
-			),
-		),
-		null,
-	);
-});
-
-test('decode returns null on non-finite targetHours', () => {
-	assert.equal(decodeGroup(btoa('{"v":1,"title":"x","targetHours":1e999,"sessions":[]}')), null);
-});
-
-test('decode returns null on negative targetHours', () => {
-	assert.equal(
-		decodeGroup(btoa(JSON.stringify({ v: 1, title: 'x', targetHours: -5, sessions: [] }))),
-		null,
-	);
 });

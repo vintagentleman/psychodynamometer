@@ -205,7 +205,6 @@ function readForm() {
 	const starts = formData.getAll('start');
 	const ends = formData.getAll('end');
 	return {
-		v: 1,
 		title: String(formData.get('title') ?? ''),
 		targetHours: Number(formData.get('targetHours') ?? 0) || 0,
 		sessions: dates.map((date, i) => ({
