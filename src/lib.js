@@ -82,3 +82,19 @@ export function computeProgress(sessions, targetHours, now) {
 	const percent = targetHours > 0 ? Math.min(100, (completedHours / targetHours) * 100) : 0;
 	return { completedHours, remainingHours, percent };
 }
+
+/**
+ * Earliest session that has not ended. A session running right now counts,
+ * flagged inProgress.
+ * @param {Session[]} sessions
+ * @param {Date} now
+ * @returns {{ session: Session, inProgress: boolean } | null}
+ */
+export function findNextSession(sessions, now) {
+	const upcoming = sessions
+		.filter((session) => session.endDT > now)
+		.sort((a, b) => a.startDT.getTime() - b.startDT.getTime());
+	const session = upcoming[0];
+	if (session === undefined) return null;
+	return { session, inProgress: session.startDT <= now };
+}

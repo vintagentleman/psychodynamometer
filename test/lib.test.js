@@ -85,3 +85,24 @@ test('computeProgress overshoot: percent caps, real hours shown, remaining clamp
 test('computeProgress with zero target yields zero percent', () => {
 	assert.equal(computeProgress(fixture, 0, new Date(2026, 1, 1)).percent, 0);
 });
+
+import { findNextSession } from '../src/lib.js';
+
+test('findNextSession picks the earliest not-yet-ended session', () => {
+	const next = findNextSession(fixture, new Date(2026, 0, 6));
+	assert.ok(next);
+	assert.equal(next.session.date, '2026-01-07');
+	assert.equal(next.inProgress, false);
+});
+
+test('findNextSession flags a session running right now', () => {
+	const next = findNextSession(fixture, new Date(2026, 0, 20, 11, 0));
+	assert.ok(next);
+	assert.equal(next.session.date, '2026-01-20');
+	assert.equal(next.inProgress, true);
+});
+
+test('findNextSession returns null when everything ended or list is empty', () => {
+	assert.equal(findNextSession(fixture, new Date(2026, 1, 1)), null);
+	assert.equal(findNextSession([], new Date(2026, 0, 1)), null);
+});
