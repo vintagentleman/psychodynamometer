@@ -7,16 +7,13 @@
 	--ink-2: #52514e;
 	--muted: #757370;
 	--hairline: #e1e0d9;
-	--border: rgba(11, 11, 11, 0.1);
-
+	--border: rgb(11 11 11 / 10%);
 	--viz-done: #2a78d6;
 	--meter-track: #cde2fb;
-
 	--accent-ink: #9a3d12;
 	--accent-wash: #fbeee6;
 	--accent-mark: #eb6834;
 	--invalid: #d03b3b;
-
 	--radius: 12px;
 	--radius-bar: 4px;
 }
@@ -25,15 +22,13 @@
 	:root {
 		--page: #0d0d0d;
 		--surface: #1a1a19;
-		--ink: #ffffff;
+		--ink: #fff;
 		--ink-2: #c3c2b7;
 		--muted: #898781;
 		--hairline: #2c2c2a;
-		--border: rgba(255, 255, 255, 0.1);
-
+		--border: rgb(255 255 255 / 10%);
 		--viz-done: #3987e5;
 		--meter-track: #0d366b;
-
 		--accent-ink: #f0956d;
 		--accent-wash: #33201a;
 		--accent-mark: #d95926;
@@ -333,6 +328,9 @@ button {
 	}
 }
 
+/* stylelint-disable-next-line no-descending-specificity --
+   only sets padding; the higher-specificity `.block + .page-actions` sets
+   border-top, so there is no real cascade conflict to reorder around. */
 .page-actions {
 	padding: 12px 20px;
 }
@@ -430,22 +428,21 @@ button {
 	}
 }
 
-@media (min-width: 900px) {
+@media (width >= 900px) {
 	#app {
 		max-width: 920px;
 	}
 
 	.page.view {
 		display: grid;
-		grid-template-columns: 1.1fr 1fr;
-		grid-template-rows: auto auto auto auto 1fr auto;
-		grid-template-areas:
-			'mast sched'
-			'prog sched'
-			'next sched'
-			'rhythm sched'
-			'fill sched'
-			'foot foot';
+		grid-template:
+			'mast sched' auto
+			'prog sched' auto
+			'next sched' auto
+			'rhythm sched' auto
+			'fill sched' 1fr
+			'foot foot' auto
+			/ 1.1fr 1fr;
 
 		& .masthead {
 			grid-area: mast;

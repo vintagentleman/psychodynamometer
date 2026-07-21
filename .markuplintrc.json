@@ -1,0 +1,18 @@
+{
+	"extends": ["markuplint:recommended"],
+	"excludeFiles": ["./.superpowers/**/*"],
+	"overrides": {
+		"./index.html": {
+			"rules": {
+				"required-h1": false,
+				"require-accessible-name": false
+			},
+			"nodeRules": [
+				{
+					"selector": ".sessions",
+					"rules": { "wai-aria": false }
+				}
+			]
+		}
+	}
+}

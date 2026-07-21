@@ -27,7 +27,8 @@ runtime dependencies, no frameworks — plain ES modules served as authored.
 
 ## Commands
 
-- `npm run check` — the gate: typecheck + lint + format check + tests.
+- `npm run check` — the gate: typecheck + lint (markuplint + stylelint +
+  eslint) + format check + tests.
 - `npm test` — Node built-in runner, tests in `test/`.
 - `npm run test:e2e` — Playwright browser suite in `e2e/` (self-serving;
   needs `npx playwright install chromium` once per machine).
