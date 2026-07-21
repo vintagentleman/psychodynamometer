@@ -171,6 +171,9 @@ function viewFragment(data, now, withFooter = false) {
 	// Month labels group the weeks they cover: one cell per month, sized by
 	// its week count and centered, so a label reads as belonging to the whole
 	// month's bars rather than to whichever bar happens to sit above it.
+	// Approximation: strip and axis share the 3px gap but differ in item
+	// count, so interior month boundaries drift from true bar spans by a few
+	// pixels (~2px worst case on realistic spans; zero at the edges).
 	const axis = slot(fragment, '.axis');
 	/** @type {{ month: string, weeks: number }[]} */
 	const months = [];
