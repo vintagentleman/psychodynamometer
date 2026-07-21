@@ -1,0 +1,410 @@
+:root {
+	color-scheme: light dark;
+
+	--page: #f9f9f7;
+	--surface: #fcfcfb;
+	--ink: #0b0b0b;
+	--ink-2: #52514e;
+	--muted: #898781;
+	--hairline: #e1e0d9;
+	--border: rgba(11, 11, 11, 0.1);
+
+	--viz-done: #2a78d6;
+	--viz-upcoming: #86b6ef;
+	--meter-track: #cde2fb;
+
+	--accent-ink: #9a3d12;
+	--accent-wash: #fbeee6;
+	--accent-mark: #eb6834;
+	--invalid: #d03b3b;
+
+	--radius: 12px;
+	--radius-bar: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--page: #0d0d0d;
+		--surface: #1a1a19;
+		--ink: #ffffff;
+		--ink-2: #c3c2b7;
+		--muted: #898781;
+		--hairline: #2c2c2a;
+		--border: rgba(255, 255, 255, 0.1);
+
+		--viz-done: #3987e5;
+		--viz-upcoming: #184f95;
+		--meter-track: #0d366b;
+
+		--accent-ink: #f0956d;
+		--accent-wash: #33201a;
+		--accent-mark: #d95926;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: 16px;
+	background: var(--page);
+	color: var(--ink);
+	font:
+		15px/1.5 system-ui,
+		-apple-system,
+		'Segoe UI',
+		sans-serif;
+}
+
+#app {
+	max-width: 420px;
+	margin-inline: auto;
+}
+
+button {
+	font: inherit;
+	padding: 8px 14px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--ink);
+	color: var(--surface);
+	font-weight: 600;
+	cursor: pointer;
+
+	&.ghost {
+		background: var(--surface);
+		color: var(--ink);
+		font-weight: 400;
+
+		&:hover {
+			border-color: var(--muted);
+		}
+	}
+}
+
+.lang-toggle {
+	display: flex;
+	justify-content: flex-end;
+	gap: 4px;
+	margin-bottom: 10px;
+
+	& .lang {
+		padding: 4px 10px;
+		font-size: 12px;
+		background: var(--surface);
+		color: var(--ink-2);
+		font-weight: 400;
+
+		&.active {
+			background: var(--ink);
+			color: var(--surface);
+			border-color: transparent;
+			font-weight: 600;
+		}
+	}
+}
+
+.page {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	overflow: hidden;
+}
+
+.masthead {
+	padding: 20px;
+	border-bottom: 1px solid var(--hairline);
+
+	& h1 {
+		margin: 0;
+		font-size: 20px;
+	}
+
+	& p {
+		margin: 4px 0 0;
+		color: var(--ink-2);
+		font-size: 13px;
+	}
+}
+
+.block {
+	padding: 16px 20px;
+
+	& + .block,
+	& + .page-actions {
+		border-top: 1px solid var(--hairline);
+	}
+}
+
+.label {
+	margin: 0 0 8px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted);
+
+	&.accent {
+		color: var(--accent-ink);
+	}
+}
+
+.hero {
+	margin: 0 0 10px;
+	font-size: 32px;
+	font-weight: 700;
+
+	& .hero-side {
+		font-size: 15px;
+		font-weight: 400;
+		color: var(--ink-2);
+	}
+}
+
+.meter {
+	height: 12px;
+	border-radius: var(--radius-bar);
+	background: var(--meter-track);
+
+	& .meter-fill {
+		height: 100%;
+		max-width: 100%;
+		border-radius: 0 var(--radius-bar) var(--radius-bar) 0;
+		background: var(--viz-done);
+	}
+}
+
+.next-card {
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: var(--accent-wash);
+
+	& .next-when {
+		margin: 4px 0 0;
+		font-size: 16px;
+		font-weight: 600;
+	}
+}
+
+.strip {
+	display: flex;
+	align-items: flex-end;
+	gap: 3px;
+	height: 64px;
+}
+
+.bar {
+	flex: 1 1 0;
+	max-width: 24px;
+	border-radius: var(--radius-bar) var(--radius-bar) 0 0;
+	background: var(--viz-done);
+
+	&.upcoming {
+		background: var(--viz-upcoming);
+	}
+}
+
+.today-divider {
+	position: relative;
+	align-self: stretch;
+	width: 1px;
+	flex: none;
+	background: var(--muted);
+
+	& span {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 10px;
+		color: var(--muted);
+		white-space: nowrap;
+	}
+}
+
+.axis {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 4px;
+	font-size: 11px;
+	color: var(--muted);
+}
+
+.legend {
+	display: flex;
+	gap: 14px;
+	margin-top: 14px;
+	font-size: 12px;
+	color: var(--ink-2);
+
+	& .key {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	& .swatch {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		border-radius: 3px;
+
+		&.done {
+			background: var(--viz-done);
+		}
+
+		&.upcoming {
+			background: var(--viz-upcoming);
+		}
+	}
+}
+
+.sessions {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	& .session {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 7px 0;
+		font-variant-numeric: tabular-nums;
+
+		&:not(:last-child) {
+			border-bottom: 1px solid var(--hairline);
+		}
+
+		& .dot {
+			flex: none;
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: var(--viz-upcoming);
+		}
+
+		&.past {
+			color: var(--ink-2);
+
+			& .dot {
+				background: var(--viz-done);
+			}
+		}
+
+		&.next {
+			font-weight: 600;
+
+			& .dot {
+				background: var(--accent-mark);
+			}
+		}
+
+		& .date {
+			min-width: 110px;
+		}
+
+		& .hours {
+			margin-left: auto;
+			color: var(--muted);
+		}
+	}
+}
+
+.page-actions {
+	padding: 12px 20px;
+}
+
+.note {
+	margin: 14px 20px 0;
+	padding: 10px 14px;
+	border-radius: 10px;
+	background: var(--accent-wash);
+	color: var(--accent-ink);
+	font-size: 13px;
+}
+
+.build {
+	& form {
+		display: grid;
+		gap: 14px;
+	}
+
+	& .field {
+		display: grid;
+		gap: 4px;
+		font-size: 13px;
+		color: var(--ink-2);
+	}
+
+	& input {
+		font: inherit;
+		padding: 8px 10px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--surface);
+		color: var(--ink);
+	}
+
+	& fieldset {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		display: grid;
+		gap: 8px;
+	}
+
+	& legend {
+		padding: 0;
+		margin-bottom: 4px;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	& #rows {
+		display: grid;
+		gap: 6px;
+	}
+
+	& .row {
+		display: flex;
+		gap: 6px;
+
+		& input[type='date'] {
+			flex: 1.4 1 0;
+			min-width: 0;
+		}
+
+		& input[type='time'] {
+			flex: 1 1 0;
+			min-width: 0;
+		}
+
+		&.invalid input {
+			border-color: var(--invalid);
+		}
+	}
+
+	& .remove {
+		flex: none;
+		background: var(--surface);
+		color: var(--muted);
+		font-weight: 400;
+	}
+
+	& .preview-label {
+		margin: 18px 20px 8px;
+	}
+
+	& #preview {
+		padding: 0 20px 20px;
+
+		& .page {
+			border-radius: 10px;
+		}
+	}
+}
