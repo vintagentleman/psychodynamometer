@@ -26,5 +26,98 @@
 		<main id="app">
 			<noscript>This tool needs JavaScript to compute progress from the link.</noscript>
 		</main>
+
+		<template id="tpl-lang-toggle">
+			<div class="lang-toggle" role="group" aria-label="Language / Язык">
+				<button type="button" class="lang" data-lang="en">EN</button>
+				<button type="button" class="lang" data-lang="ru">RU</button>
+			</div>
+		</template>
+
+		<template id="tpl-view">
+			<article class="page view">
+				<header class="masthead">
+					<h1></h1>
+					<p class="masthead-hours"></p>
+				</header>
+				<section class="block sec-progress">
+					<h2 class="label" data-i18n="progress"></h2>
+					<p class="hero"><span class="hero-value"></span><span class="hero-side"></span></p>
+					<div class="meter"><div class="meter-fill"></div></div>
+				</section>
+				<section class="block sec-next">
+					<div class="next-card">
+						<h2 class="label accent" data-i18n="nextSession"></h2>
+						<p class="next-when"></p>
+					</div>
+				</section>
+				<section class="block sec-rhythm">
+					<h2 class="label" data-i18n="rhythm"></h2>
+					<div class="strip"></div>
+					<div class="axis"><span class="axis-start"></span><span class="axis-end"></span></div>
+					<div class="legend">
+						<span class="key"><i class="swatch done"></i><span data-i18n="done"></span></span>
+						<span class="key"
+							><i class="swatch upcoming"></i><span data-i18n="upcoming"></span
+						></span>
+					</div>
+				</section>
+				<section class="block sec-schedule">
+					<h2 class="label" data-i18n="schedule"></h2>
+					<ol class="sessions"></ol>
+				</section>
+				<footer class="page-actions">
+					<button type="button" class="ghost" id="edit" data-i18n="edit"></button>
+				</footer>
+			</article>
+		</template>
+
+		<template id="tpl-session">
+			<li class="session">
+				<i class="dot"></i>
+				<span class="date"></span>
+				<span class="time"></span>
+				<span class="hours"></span>
+			</li>
+		</template>
+
+		<template id="tpl-bar"><div class="bar"></div></template>
+		<template id="tpl-divider"
+			><div class="today-divider"><span data-i18n="today"></span></div
+		></template>
+		<template id="tpl-hint"><p class="note" data-i18n="previewHint"></p></template>
+
+		<template id="tpl-build">
+			<article class="page build">
+				<header class="masthead"><h1 data-i18n="buildTitle"></h1></header>
+				<p class="note note-badlink" data-i18n="badLink" hidden></p>
+				<form id="build" class="block">
+					<label class="field"><span data-i18n="groupName"></span><input name="title" /></label>
+					<label class="field">
+						<span data-i18n="targetHours"></span>
+						<input name="targetHours" type="number" min="0" step="0.5" />
+					</label>
+					<fieldset>
+						<legend data-i18n="sessions"></legend>
+						<div id="rows"></div>
+						<button type="button" class="ghost" id="add-row" data-i18n="addSession"></button>
+					</fieldset>
+					<button type="button" id="copy-link" data-i18n="copyLink"></button>
+				</form>
+				<div class="preview-pane">
+					<h2 class="label preview-label" data-i18n="preview"></h2>
+					<div id="preview"></div>
+				</div>
+			</article>
+		</template>
+
+		<template id="tpl-form-row">
+			<div class="row">
+				<input type="date" name="date" data-i18n-aria="date" />
+				<input type="time" name="start" data-i18n-aria="start" />
+				<input type="time" name="end" data-i18n-aria="end" />
+				<button type="button" class="remove" data-i18n-aria="remove">×</button>
+			</div>
+		</template>
 	</body>
 </html>

@@ -16,6 +16,8 @@ import { resolveLocale, t } from './i18n.js';
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
 
+const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
+
 function readStoredLang() {
 	try {
 		return localStorage.getItem('lang');
@@ -23,7 +25,9 @@ function readStoredLang() {
 		return null;
 	}
 }
-function storeLang(/** @type {string} */ lang) {
+
+/** @param {string} lang */
+function storeLang(lang) {
 	try {
 		localStorage.setItem('lang', lang);
 	} catch {
@@ -31,22 +35,52 @@ function storeLang(/** @type {string} */ lang) {
 	}
 }
 
-const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
 let locale = resolveLocale(navigator.language, readStoredLang());
 document.documentElement.lang = locale;
 
-/** @param {unknown} value */
-function esc(value) {
-	return String(value).replace(
-		/[&<>"']/g,
-		(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
-	);
+/**
+ * Clone a template and resolve its data-i18n / data-i18n-aria bindings.
+ * All markup lives in index.html templates; user data lands via
+ * textContent only — nothing in this module concatenates HTML.
+ * @param {string} id
+ * @returns {DocumentFragment}
+ */
+function cloneTemplate(id) {
+	const template = /** @type {HTMLTemplateElement} */ (document.getElementById(id));
+	const fragment = /** @type {DocumentFragment} */ (template.content.cloneNode(true));
+	for (const el of fragment.querySelectorAll('[data-i18n]')) {
+		el.textContent = t(locale, /** @type {HTMLElement} */ (el).dataset.i18n ?? '');
+	}
+	for (const el of fragment.querySelectorAll('[data-i18n-aria]')) {
+		el.setAttribute(
+			'aria-label',
+			t(locale, /** @type {HTMLElement} */ (el).dataset.i18nAria ?? ''),
+		);
+	}
+	return fragment;
 }
 
-function langToggleHTML() {
-	const button = (/** @type {import('./i18n.js').Locale} */ lang) =>
-		`<button type="button" class="lang${locale === lang ? ' active' : ''}" data-lang="${lang}" aria-pressed="${locale === lang}">${lang.toUpperCase()}</button>`;
-	return `<div class="lang-toggle" role="group" aria-label="Language / Язык">${button('en')}${button('ru')}</div>`;
+/**
+ * @param {DocumentFragment | Element} root
+ * @param {string} selector
+ */
+function slot(root, selector) {
+	return /** @type {HTMLElement} */ (root.querySelector(selector));
+}
+
+function currentPayload() {
+	const match = location.hash.match(/^#d=(.+)$/);
+	return match ? match[1] : null;
+}
+
+function langToggleFragment() {
+	const fragment = cloneTemplate('tpl-lang-toggle');
+	for (const button of fragment.querySelectorAll('button.lang')) {
+		const lang = /** @type {HTMLElement} */ (button).dataset.lang;
+		button.classList.toggle('active', locale === lang);
+		button.setAttribute('aria-pressed', String(locale === lang));
+	}
+	return fragment;
 }
 
 /** @param {() => void} rerender */
@@ -63,19 +97,14 @@ function wireLangToggle(rerender) {
 	}
 }
 
-function currentPayload() {
-	const match = location.hash.match(/^#d=(.+)$/);
-	return match ? match[1] : null;
-}
-
 /**
- * The full dashboard for one group, as an HTML string (used for the main
- * view and, later, the build-mode live preview).
+ * The dashboard for one group, cloned from #tpl-view.
  * @param {GroupData} data
  * @param {Date} now
- * @param {string} [footerHTML]
+ * @param {boolean} [withFooter]
+ * @returns {DocumentFragment}
  */
-function viewHTML(data, now, footerHTML = '') {
+function viewFragment(data, now, withFooter = false) {
 	const sessions = parseSessions(data.sessions);
 	const { completedHours, remainingHours, percent } = computeProgress(
 		sessions,
@@ -86,112 +115,79 @@ function viewHTML(data, now, footerHTML = '') {
 	const buckets = weeklyBuckets(sessions, now);
 	const maxWeekHours = Math.max(...buckets.map((b) => b.hours), 1);
 
-	const header = `
-		<header class="masthead">
-			<h1>${esc(data.title)}</h1>
-			<p>${t(locale, 'headerHours', {
-				completed: formatHoursNum(completedHours, locale),
-				target: formatHoursNum(data.targetHours, locale),
-			})}</p>
-		</header>`;
+	const fragment = cloneTemplate('tpl-view');
+	slot(fragment, 'h1').textContent = data.title;
+	slot(fragment, '.masthead-hours').textContent = t(locale, 'headerHours', {
+		completed: formatHoursNum(completedHours, locale),
+		target: formatHoursNum(data.targetHours, locale),
+	});
 
-	const progress = `
-		<section class="block">
-			<h2 class="label">${t(locale, 'progress')}</h2>
-			<p class="hero">${Math.round(percent)}%<span class="hero-side"> · ${t(locale, 'remaining', {
-				hours: formatHoursNum(remainingHours, locale),
-			})}</span></p>
-			<div class="meter" role="img" aria-label="${Math.round(percent)}%">
-				<div class="meter-fill" style="width: ${percent}%"></div>
-			</div>
-		</section>`;
+	slot(fragment, '.hero-value').textContent = `${Math.round(percent)}%`;
+	slot(fragment, '.hero-side').textContent =
+		` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
+	const meter = slot(fragment, '.meter');
+	meter.setAttribute('role', 'img');
+	meter.setAttribute('aria-label', `${Math.round(percent)}%`);
+	slot(fragment, '.meter-fill').style.width = `${percent}%`;
 
-	const nextText = next
-		? `${formatDateLong(next.session.startDT, locale)} · ${esc(next.session.start)}–${esc(
-				next.session.end,
-			)}${next.inProgress ? ` · ${t(locale, 'inProgress')}` : ''}`
+	slot(fragment, '.next-when').textContent = next
+		? `${formatDateLong(next.session.startDT, locale)} · ${next.session.start}–${next.session.end}` +
+			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
-	const nextCard = `
-		<section class="block">
-			<div class="next-card">
-				<h2 class="label accent">${t(locale, 'nextSession')}</h2>
-				<p class="next-when">${nextText}</p>
-			</div>
-		</section>`;
-
-	const barItems = buckets.map((bucket) => {
-		const height =
-			bucket.hours === 0 ? 0 : Math.max(8, Math.round((bucket.hours / maxWeekHours) * 100));
-		const label = `${formatDateShort(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
+	const strip = slot(fragment, '.strip');
+	const firstFuture = buckets.findIndex((bucket) => bucket.status === 'future');
+	buckets.forEach((bucket, index) => {
+		// The divider renders only when it separates done from upcoming — at
+		// either edge it collides with the month labels and adds nothing the
+		// bar colors don't already say.
+		if (index === firstFuture && firstFuture > 0) strip.appendChild(cloneTemplate('tpl-divider'));
+		const bar = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
+		bar.classList.add(bucket.status === 'future' ? 'upcoming' : 'done');
+		bar.style.height =
+			bucket.hours === 0 ? '0' : `${Math.max(8, Math.round((bucket.hours / maxWeekHours) * 100))}%`;
+		bar.title = `${formatDateShort(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
 			hours: formatHoursNum(bucket.hours, locale),
 		})}`;
-		return `<div class="bar ${bucket.status === 'future' ? 'upcoming' : 'done'}" style="height: ${height}%" title="${esc(label)}"></div>`;
+		strip.appendChild(bar);
 	});
-	const firstFuture = buckets.findIndex((bucket) => bucket.status === 'future');
-	// The divider renders only when it separates done from upcoming — at either
-	// edge it collides with the month labels and adds nothing the bar colors
-	// don't already say.
-	if (firstFuture > 0) {
-		const divider = `<div class="today-divider"><span>${t(locale, 'today')}</span></div>`;
-		barItems.splice(firstFuture, 0, divider);
+	slot(fragment, '.axis-start').textContent =
+		buckets.length > 0 ? formatMonth(buckets[0].weekStart, locale) : '';
+	slot(fragment, '.axis-end').textContent =
+		buckets.length > 0 ? formatMonth(buckets[buckets.length - 1].weekStart, locale) : '';
+
+	const list = slot(fragment, '.sessions');
+	for (const session of sessions) {
+		const row = cloneTemplate('tpl-session');
+		const item = /** @type {HTMLElement} */ (row.firstElementChild);
+		item.classList.toggle('past', session.endDT <= now);
+		item.classList.toggle('next', next !== null && session === next.session);
+		slot(row, '.date').textContent = formatDateShort(session.startDT, locale);
+		slot(row, '.time').textContent = `${session.start}–${session.end}`;
+		slot(row, '.hours').textContent = t(locale, 'hoursShort', {
+			hours: formatHoursNum(session.hours, locale),
+		});
+		list.appendChild(row);
 	}
 
-	const rhythm = `
-		<section class="block">
-			<h2 class="label">${t(locale, 'rhythm')}</h2>
-			<div class="strip">${barItems.join('')}</div>
-			<div class="axis">
-				<span>${buckets.length > 0 ? esc(formatMonth(buckets[0].weekStart, locale)) : ''}</span>
-				<span>${buckets.length > 0 ? esc(formatMonth(buckets[buckets.length - 1].weekStart, locale)) : ''}</span>
-			</div>
-			<div class="legend">
-				<span class="key"><i class="swatch done"></i>${t(locale, 'done')}</span>
-				<span class="key"><i class="swatch upcoming"></i>${t(locale, 'upcoming')}</span>
-			</div>
-		</section>`;
-
-	const rows = sessions.map((session) => {
-		const isNext = next !== null && session === next.session;
-		const isPast = session.endDT <= now;
-		return `<li class="session${isPast ? ' past' : ''}${isNext ? ' next' : ''}">
-			<i class="dot"></i>
-			<span class="date">${esc(formatDateShort(session.startDT, locale))}</span>
-			<span class="time">${esc(session.start)}–${esc(session.end)}</span>
-			<span class="hours">${t(locale, 'hoursShort', { hours: formatHoursNum(session.hours, locale) })}</span>
-		</li>`;
-	});
-
-	const schedule = `
-		<section class="block">
-			<h2 class="label">${t(locale, 'schedule')}</h2>
-			<ol class="sessions">${rows.join('')}</ol>
-		</section>`;
-
-	return `<article class="page">${header}${progress}${nextCard}${rhythm}${schedule}${footerHTML}</article>`;
+	if (!withFooter) slot(fragment, '.page-actions').remove();
+	return fragment;
 }
 
 /** @param {GroupData} data */
 function renderView(data) {
-	const footer = `<footer class="page-actions"><button type="button" class="ghost" id="edit">${t(
-		locale,
-		'edit',
-	)}</button></footer>`;
-	app.innerHTML = langToggleHTML() + viewHTML(data, new Date(), footer);
+	app.replaceChildren(langToggleFragment(), viewFragment(data, new Date(), true));
 	wireLangToggle(() => renderView(data));
-	/** @type {HTMLElement} */ (app.querySelector('#edit')).addEventListener('click', () =>
-		renderBuild(data, false),
-	);
+	slot(app, '#edit').addEventListener('click', () => renderBuild(data, false));
 }
 
 /** @param {SessionInput} input */
-function sessionRowHTML(input) {
-	return `<div class="row">
-		<input type="date" name="date" value="${esc(input.date)}" aria-label="${t(locale, 'date')}" />
-		<input type="time" name="start" value="${esc(input.start)}" aria-label="${t(locale, 'start')}" />
-		<input type="time" name="end" value="${esc(input.end)}" aria-label="${t(locale, 'end')}" />
-		<button type="button" class="remove" aria-label="${t(locale, 'remove')}">×</button>
-	</div>`;
+function sessionRow(input) {
+	const fragment = cloneTemplate('tpl-form-row');
+	/** @type {HTMLInputElement} */ (slot(fragment, '[name="date"]')).value = input.date;
+	/** @type {HTMLInputElement} */ (slot(fragment, '[name="start"]')).value = input.start;
+	/** @type {HTMLInputElement} */ (slot(fragment, '[name="end"]')).value = input.end;
+	return fragment;
 }
 
 /**
@@ -227,62 +223,50 @@ function isComplete(draft) {
  * @param {boolean} badLink
  */
 function renderBuild(data, badLink) {
+	const fragment = cloneTemplate('tpl-build');
+	if (badLink) slot(fragment, '.note-badlink').hidden = false;
+	else slot(fragment, '.note-badlink').remove();
+
+	const rowsBox = slot(fragment, '#rows');
 	const rows =
 		data !== null && data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
-	app.innerHTML = `${langToggleHTML()}
-		<article class="page build">
-			<header class="masthead"><h1>${t(locale, 'buildTitle')}</h1></header>
-			${badLink ? `<p class="note">${t(locale, 'badLink')}</p>` : ''}
-			<form id="build" class="block">
-				<label class="field">${t(locale, 'groupName')}<input name="title" value="${esc(data?.title ?? '')}" /></label>
-				<label class="field">${t(locale, 'targetHours')}<input name="targetHours" type="number" min="0" step="0.5" value="${
-					data !== null && data.targetHours > 0 ? esc(data.targetHours) : ''
-				}" /></label>
-				<fieldset>
-					<legend>${t(locale, 'sessions')}</legend>
-					<div id="rows">${rows.map(sessionRowHTML).join('')}</div>
-					<button type="button" class="ghost" id="add-row">${t(locale, 'addSession')}</button>
-				</fieldset>
-				<button type="button" id="copy-link">${t(locale, 'copyLink')}</button>
-			</form>
-			<h2 class="label preview-label">${t(locale, 'preview')}</h2>
-			<div id="preview"></div>
-		</article>`;
+	for (const input of rows) rowsBox.appendChild(sessionRow(input));
+	/** @type {HTMLInputElement} */ (slot(fragment, '[name="title"]')).value = data?.title ?? '';
+	/** @type {HTMLInputElement} */ (slot(fragment, '[name="targetHours"]')).value =
+		data !== null && data.targetHours > 0 ? String(data.targetHours) : '';
+
+	app.replaceChildren(langToggleFragment(), fragment);
 
 	const form = /** @type {HTMLFormElement} */ (app.querySelector('#build'));
-	const rowsBox = /** @type {HTMLElement} */ (app.querySelector('#rows'));
-	const preview = /** @type {HTMLElement} */ (app.querySelector('#preview'));
+	const liveRows = slot(app, '#rows');
+	const preview = slot(app, '#preview');
 	const copyButton = /** @type {HTMLButtonElement} */ (app.querySelector('#copy-link'));
 	wireLangToggle(() => renderBuild(readForm(), badLink));
 
 	const update = () => {
-		for (const row of rowsBox.querySelectorAll('.row')) {
+		for (const row of liveRows.querySelectorAll('.row')) {
 			const inputs = row.querySelectorAll('input');
 			const [date, start, end] = [...inputs].map((input) => input.value);
 			const filled = date !== '' && start !== '' && end !== '';
 			row.classList.toggle('invalid', filled && parseSession({ date, start, end }) === null);
 		}
 		const draft = readForm();
-		preview.innerHTML = isComplete(draft)
-			? viewHTML(draft, new Date())
-			: `<p class="note">${t(locale, 'previewHint')}</p>`;
+		if (isComplete(draft)) preview.replaceChildren(viewFragment(draft, new Date()));
+		else preview.replaceChildren(cloneTemplate('tpl-hint'));
 	};
 
 	form.addEventListener('input', update);
-
-	/** @type {HTMLElement} */ (app.querySelector('#add-row')).addEventListener('click', () => {
-		rowsBox.insertAdjacentHTML('beforeend', sessionRowHTML({ date: '', start: '', end: '' }));
+	slot(app, '#add-row').addEventListener('click', () => {
+		liveRows.appendChild(sessionRow({ date: '', start: '', end: '' }));
 		update();
 	});
-
-	rowsBox.addEventListener('click', (event) => {
+	liveRows.addEventListener('click', (event) => {
 		const target = /** @type {HTMLElement} */ (event.target);
-		if (target.closest('.remove') && rowsBox.querySelectorAll('.row').length > 1) {
+		if (target.closest('.remove') && liveRows.querySelectorAll('.row').length > 1) {
 			target.closest('.row')?.remove();
 			update();
 		}
 	});
-
 	copyButton.addEventListener('click', () => {
 		const draft = readForm();
 		update();
@@ -298,7 +282,6 @@ function renderBuild(data, badLink) {
 			})
 			.catch(() => {});
 	});
-
 	update();
 }
 
