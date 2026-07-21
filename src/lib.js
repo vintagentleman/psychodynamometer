@@ -38,3 +38,47 @@ export function decodeGroup(payload) {
 		return null;
 	}
 }
+
+/** @typedef {SessionInput & { startDT: Date, endDT: Date, hours: number }} Session */
+
+/**
+ * Build a Session from raw input. Datetimes are naive local wall-clock.
+ * @param {SessionInput} input
+ * @returns {Session | null}
+ */
+export function parseSession(input) {
+	const startDT = new Date(`${input.date}T${input.start}`);
+	const endDT = new Date(`${input.date}T${input.end}`);
+	if (Number.isNaN(startDT.getTime()) || Number.isNaN(endDT.getTime()) || endDT <= startDT) {
+		return null;
+	}
+	const hours = (endDT.getTime() - startDT.getTime()) / 3_600_000;
+	return { ...input, startDT, endDT, hours };
+}
+
+/**
+ * Parse many inputs: invalid ones are dropped, the rest sorted chronologically.
+ * @param {SessionInput[]} inputs
+ * @returns {Session[]}
+ */
+export function parseSessions(inputs) {
+	return inputs
+		.map(parseSession)
+		.filter((session) => session !== null)
+		.sort((a, b) => a.startDT.getTime() - b.startDT.getTime());
+}
+
+/**
+ * @param {Session[]} sessions
+ * @param {number} targetHours
+ * @param {Date} now
+ * @returns {{ completedHours: number, remainingHours: number, percent: number }}
+ */
+export function computeProgress(sessions, targetHours, now) {
+	const completedHours = sessions
+		.filter((session) => session.endDT <= now)
+		.reduce((sum, session) => sum + session.hours, 0);
+	const remainingHours = Math.max(0, targetHours - completedHours);
+	const percent = targetHours > 0 ? Math.min(100, (completedHours / targetHours) * 100) : 0;
+	return { completedHours, remainingHours, percent };
+}
