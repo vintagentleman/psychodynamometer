@@ -28,6 +28,7 @@ JSDoc-typed JavaScript checked by `tsc`; tests on Node's built-in runner.
 ```bash
 npm install          # dev tooling only
 npm run check        # typecheck + lint + format check + tests
+npm run test:e2e     # browser end-to-end suite (playwright)
 npx -y serve .       # serve locally (ES modules need http://)
 git config core.hooksPath .githooks   # once per clone: commit-msg linting
 ```

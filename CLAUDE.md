@@ -18,11 +18,17 @@ runtime dependencies, no frameworks — plain ES modules served as authored.
   session). Weekday + spelled month via `Intl.DateTimeFormat`, always.
 - Pure logic lives in `src/lib.js` (unit-tested, no DOM); DOM only in
   `src/app.js`; UI strings only in `src/i18n.js` (en + ru, same key sets).
-- Group data is encoded in the URL hash (`#d=`, versioned schema `v: 1`,
-  UTF-8-safe base64url). Titles are user input — escape on render.
+- Group data is encoded in the URL hash: `#d=2~<targetHours>~<sessions>~<title>`
+  — sessions are `_`-joined `YYMMDD.HHMM.HHMM`, the title is percent-encoded
+  and always last (see `src/lib.js`). No pre-v2 compatibility exists.
+- User data reaches the DOM only via `<template>` cloning and
+  `textContent`/attribute setters — never string-built HTML. Markup lives in
+  `index.html` templates; `src/app.js` only clones and fills them.
 
 ## Commands
 
 - `npm run check` — the gate: typecheck + lint + format check + tests.
 - `npm test` — Node built-in runner, tests in `test/`.
+- `npm run test:e2e` — Playwright browser suite in `e2e/` (self-serving;
+  needs `npx playwright install chromium` once per machine).
 - `npx -y serve .` — local serving (modules need http).
