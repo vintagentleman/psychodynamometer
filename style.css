@@ -482,6 +482,7 @@ button {
 
 		& form {
 			grid-area: form;
+			align-content: start;
 		}
 
 		& .preview-pane {
