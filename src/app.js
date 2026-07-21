@@ -16,8 +16,23 @@ import { resolveLocale, t } from './i18n.js';
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
 
+function readStoredLang() {
+	try {
+		return localStorage.getItem('lang');
+	} catch {
+		return null;
+	}
+}
+function storeLang(/** @type {string} */ lang) {
+	try {
+		localStorage.setItem('lang', lang);
+	} catch {
+		/* storage blocked — non-fatal */
+	}
+}
+
 const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
-let locale = resolveLocale(navigator.language, localStorage.getItem('lang'));
+let locale = resolveLocale(navigator.language, readStoredLang());
 document.documentElement.lang = locale;
 
 /** @param {unknown} value */
@@ -41,7 +56,7 @@ function wireLangToggle(rerender) {
 			const lang = /** @type {HTMLElement} */ (button).dataset.lang;
 			if (lang !== 'en' && lang !== 'ru') return;
 			locale = lang;
-			localStorage.setItem('lang', lang);
+			storeLang(lang);
 			document.documentElement.lang = lang;
 			rerender();
 		});
@@ -271,12 +286,15 @@ function renderBuild(data, badLink) {
 		update();
 		if (!isComplete(draft)) return;
 		const url = `${location.origin}${location.pathname}#d=${encodeGroup(draft)}`;
-		navigator.clipboard.writeText(url).then(() => {
-			copyButton.textContent = t(locale, 'copied');
-			setTimeout(() => {
-				copyButton.textContent = t(locale, 'copyLink');
-			}, 1500);
-		});
+		navigator.clipboard
+			.writeText(url)
+			.then(() => {
+				copyButton.textContent = t(locale, 'copied');
+				setTimeout(() => {
+					copyButton.textContent = t(locale, 'copyLink');
+				}, 1500);
+			})
+			.catch(() => {});
 	});
 
 	update();
@@ -293,7 +311,11 @@ function route() {
 		renderBuild(null, true);
 		return;
 	}
-	renderView(data);
+	try {
+		renderView(data);
+	} catch {
+		renderBuild(null, true);
+	}
 }
 
 window.addEventListener('hashchange', route);
