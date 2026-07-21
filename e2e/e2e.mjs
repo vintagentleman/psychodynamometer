@@ -152,6 +152,20 @@ check('copied flash', flashed);
 const copied = await page.evaluate(() => navigator.clipboard.readText());
 check('clipboard has compact v2 url', /#d=2~/.test(copied), copied.slice(0, 60) + '…');
 check('compact link is short', copied.length < 200, `${copied.length} chars`);
+
+await page.click('#add-row');
+await page.click('#copy-link');
+const copiedWithBlank = await page.evaluate(() => navigator.clipboard.readText());
+check('blank row excluded from copied link', copiedWithBlank === copied);
+await page.fill('#rows .row:nth-child(2) input[name="date"]', '2026-02-01');
+await page.click('#copy-link');
+check('partial row flagged invalid on copy', (await page.$$('#rows .row.invalid')).length === 1);
+check(
+	'partial row blocks copy',
+	(await page.evaluate(() => navigator.clipboard.readText())) === copied,
+);
+await page.click('#rows .row:nth-child(2) .remove');
+
 await page.goto(copied);
 check('copied link round-trips', (await page.textContent('.masthead h1')) === 'Test Group');
 

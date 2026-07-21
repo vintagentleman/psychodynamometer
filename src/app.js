@@ -268,10 +268,22 @@ function renderBuild(data, badLink) {
 		}
 	});
 	copyButton.addEventListener('click', () => {
-		const draft = readForm();
 		update();
-		if (!isComplete(draft)) return;
-		const url = `${location.origin}${location.pathname}#d=${encodeGroup(draft)}`;
+		const draft = readForm();
+		let blocked = false;
+		for (const row of liveRows.querySelectorAll('.row')) {
+			const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
+			const empty = date === '' && start === '' && end === '';
+			const bad = !empty && parseSession({ date, start, end }) === null;
+			row.classList.toggle('invalid', bad);
+			blocked ||= bad;
+		}
+		const cleaned = {
+			...draft,
+			sessions: draft.sessions.filter((s) => !(s.date === '' && s.start === '' && s.end === '')),
+		};
+		if (blocked || !isComplete(cleaned)) return;
+		const url = `${location.origin}${location.pathname}#d=${encodeGroup(cleaned)}`;
 		navigator.clipboard
 			.writeText(url)
 			.then(() => {
