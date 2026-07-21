@@ -148,11 +148,10 @@ function viewFragment(data, now, withFooter = false) {
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
 	const strip = slot(fragment, '.strip');
-	const axis = slot(fragment, '.axis');
-	let previousMonth = '';
 	for (const bucket of buckets) {
 		const total = bucket.doneHours + bucket.upcomingHours;
-		const bar = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
+		const slotEl = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
+		const bar = /** @type {HTMLElement} */ (slotEl.querySelector('.bar'));
 		bar.style.height =
 			total === 0 ? '0' : `${Math.max(8, Math.round((total / maxWeekHours) * 100))}%`;
 		// Upcoming stacks on top of done; the color boundary is "now", so no
@@ -163,17 +162,28 @@ function viewFragment(data, now, withFooter = false) {
 		if (bucket.doneHours > 0) {
 			bar.appendChild(segment('done', bucket.doneHours / total));
 		}
-		bar.title = `${formatDateShort(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
+		slotEl.title = `${formatDateShort(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
 			hours: formatHoursNum(total, locale),
 		})}`;
-		strip.appendChild(bar);
+		strip.appendChild(slotEl);
+	}
 
-		// Month label under the first week of each month — the axis mirrors
-		// the strip's slot layout so labels sit beneath their bars.
-		const cell = /** @type {HTMLElement} */ (cloneTemplate('tpl-axis-cell').firstElementChild);
+	// Month labels group the weeks they cover: one cell per month, sized by
+	// its week count and centered, so a label reads as belonging to the whole
+	// month's bars rather than to whichever bar happens to sit above it.
+	const axis = slot(fragment, '.axis');
+	/** @type {{ month: string, weeks: number }[]} */
+	const months = [];
+	for (const bucket of buckets) {
 		const month = formatMonth(bucket.weekStart, locale);
-		if (month !== previousMonth) cell.textContent = month;
-		previousMonth = month;
+		const current = months[months.length - 1];
+		if (current !== undefined && current.month === month) current.weeks += 1;
+		else months.push({ month, weeks: 1 });
+	}
+	for (const group of months) {
+		const cell = /** @type {HTMLElement} */ (cloneTemplate('tpl-axis-cell').firstElementChild);
+		cell.textContent = group.month;
+		cell.style.flexGrow = String(group.weeks);
 		axis.appendChild(cell);
 	}
 

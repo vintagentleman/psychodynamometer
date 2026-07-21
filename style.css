@@ -190,14 +190,19 @@ button {
 
 .strip {
 	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
 	gap: 3px;
 	height: 64px;
 }
 
-.bar {
+.slot {
 	flex: 1 1 0;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+}
+
+.bar {
+	width: 100%;
 	max-width: 24px;
 	display: flex;
 	flex-direction: column;
@@ -226,7 +231,6 @@ button {
 
 .axis {
 	display: flex;
-	justify-content: space-between;
 	gap: 3px;
 	margin-top: 4px;
 	font-size: 11px;
@@ -234,9 +238,12 @@ button {
 
 	& .axis-cell {
 		flex: 1 1 0;
-		max-width: 24px;
 		text-align: center;
 		white-space: nowrap;
+	}
+
+	& .axis-cell + .axis-cell {
+		border-left: 1px solid var(--hairline);
 	}
 }
 

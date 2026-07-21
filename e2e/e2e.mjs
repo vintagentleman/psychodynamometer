@@ -95,7 +95,7 @@ check('no today divider exists', (await page.$$('.today-divider')).length === 0)
 check(
 	'current week with only future sessions renders upcoming',
 	await page.$eval(
-		'.strip .bar:nth-child(8)',
+		'.strip .slot:nth-child(8) .bar',
 		(bar) => bar.querySelector('.seg.done') === null && bar.querySelector('.seg.upcoming') !== null,
 	),
 );
@@ -105,11 +105,11 @@ const axisLabels = await page.$$eval('.axis .axis-cell', (cells) =>
 	cells.map((cell) => cell.textContent).filter((text) => text !== ''),
 );
 check(
-	'month labels under month-first weeks',
+	'month labels for each month group',
 	axisLabels.join(',') === 'Jun,Jul,Aug',
 	axisLabels.join(','),
 );
-check('axis mirrors bucket count', (await page.$$('.axis .axis-cell')).length === 10);
+check('axis has one cell per month group', (await page.$$('.axis .axis-cell')).length === 3);
 const rows = await page.$$('.sessions .session');
 check('schedule rows = 11', rows.length === 11, `got ${rows.length}`);
 check('past rows marked', (await page.$$('.sessions .session.past')).length === 7);
@@ -208,14 +208,14 @@ const futureOnly = encodeGroup({
 await page.goto(`${BASE}/#d=${futureOnly}`);
 check('all-future: only upcoming segments', (await page.$$('.strip .seg.done')).length === 0);
 const geo = await page.$eval('.strip', (strip) => {
-	const stripBars = [...strip.querySelectorAll('.bar')];
+	const slots = [...strip.querySelectorAll('.slot')];
 	const sr = strip.getBoundingClientRect();
-	const first = stripBars[0].getBoundingClientRect();
-	const last = stripBars[stripBars.length - 1].getBoundingClientRect();
+	const first = slots[0].getBoundingClientRect();
+	const last = slots[slots.length - 1].getBoundingClientRect();
 	return { leftGap: Math.abs(sr.left - first.left), rightGap: Math.abs(sr.right - last.right) };
 });
 check(
-	'bars span full axis width',
+	'week slots span full axis width',
 	geo.leftGap < 2 && geo.rightGap < 2,
 	`leftGap=${geo.leftGap.toFixed(1)} rightGap=${geo.rightGap.toFixed(1)}`,
 );
@@ -235,6 +235,34 @@ const pastOnly = encodeGroup({
 });
 await page.goto(`${BASE}/#d=${pastOnly}`);
 check('all-past: only done segments', (await page.$$('.strip .seg.upcoming')).length === 0);
+
+// two August sessions in different weeks — ONE Aug label spanning both bars
+const twoAug = encodeGroup({
+	title: 'A',
+	targetHours: 10,
+	sessions: [
+		{ date: '2026-08-09', start: '12:00', end: '13:00' },
+		{ date: '2026-08-23', start: '12:00', end: '18:00' },
+	],
+});
+await page.goto(`${BASE}/#d=${twoAug}`);
+const augAxis = await page.$$eval('.axis .axis-cell', (cells) => cells.map((c) => c.textContent));
+check(
+	'one month label for two august weeks',
+	augAxis.length === 1 && augAxis[0] === 'Aug',
+	augAxis.join(','),
+);
+check(
+	'month label spans all its bars',
+	await page.evaluate(() => {
+		const cell = document.querySelector('.axis .axis-cell')?.getBoundingClientRect();
+		const barRects = [...document.querySelectorAll('.strip .bar')]
+			.filter((bar) => bar.style.height !== '0')
+			.map((bar) => bar.getBoundingClientRect());
+		if (!cell || barRects.length === 0) return false;
+		return barRects.every((rect) => rect.left >= cell.left - 2 && rect.right <= cell.right + 2);
+	}),
+);
 
 // a week straddling "now" (frozen Tue 21 Jul): Mon session done, Thu session upcoming
 const mixedWeek = encodeGroup({
