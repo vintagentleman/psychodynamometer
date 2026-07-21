@@ -128,10 +128,13 @@ function viewHTML(data, now, footerHTML = '') {
 		})}`;
 		return `<div class="bar ${bucket.status === 'future' ? 'upcoming' : 'done'}" style="height: ${height}%" title="${esc(label)}"></div>`;
 	});
-	if (buckets.length > 0) {
-		const firstFuture = buckets.findIndex((bucket) => bucket.status === 'future');
+	const firstFuture = buckets.findIndex((bucket) => bucket.status === 'future');
+	// The divider renders only when it separates done from upcoming — at either
+	// edge it collides with the month labels and adds nothing the bar colors
+	// don't already say.
+	if (firstFuture > 0) {
 		const divider = `<div class="today-divider"><span>${t(locale, 'today')}</span></div>`;
-		barItems.splice(firstFuture === -1 ? barItems.length : firstFuture, 0, divider);
+		barItems.splice(firstFuture, 0, divider);
 	}
 
 	const rhythm = `
