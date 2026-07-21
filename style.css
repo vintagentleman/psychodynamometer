@@ -409,3 +409,84 @@ button {
 		}
 	}
 }
+
+@media (min-width: 900px) {
+	#app {
+		max-width: 920px;
+	}
+
+	.page.view {
+		display: grid;
+		grid-template-columns: 1.1fr 1fr;
+		grid-template-rows: auto auto auto auto 1fr auto;
+		grid-template-areas:
+			'mast sched'
+			'prog sched'
+			'next sched'
+			'rhythm sched'
+			'fill sched'
+			'foot foot';
+
+		& .masthead {
+			grid-area: mast;
+		}
+
+		& .sec-progress {
+			grid-area: prog;
+		}
+
+		& .sec-next {
+			grid-area: next;
+		}
+
+		& .sec-rhythm {
+			grid-area: rhythm;
+		}
+
+		& .sec-schedule {
+			grid-area: sched;
+			border-top: 0;
+			border-left: 1px solid var(--hairline);
+		}
+
+		& .page-actions {
+			grid-area: foot;
+			border-top: 1px solid var(--hairline);
+		}
+	}
+
+	#preview .page.view {
+		display: block;
+
+		& .sec-schedule {
+			border-left: 0;
+			border-top: 1px solid var(--hairline);
+		}
+	}
+
+	.page.build {
+		display: grid;
+		grid-template-columns: 1.05fr 1fr;
+		grid-template-areas:
+			'mast mast'
+			'note note'
+			'form preview';
+
+		& .masthead {
+			grid-area: mast;
+		}
+
+		& > .note {
+			grid-area: note;
+		}
+
+		& form {
+			grid-area: form;
+		}
+
+		& .preview-pane {
+			grid-area: preview;
+			border-left: 1px solid var(--hairline);
+		}
+	}
+}
