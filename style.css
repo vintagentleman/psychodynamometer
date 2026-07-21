@@ -10,7 +10,6 @@
 	--border: rgba(11, 11, 11, 0.1);
 
 	--viz-done: #2a78d6;
-	--viz-upcoming: #5598e7;
 	--meter-track: #cde2fb;
 
 	--accent-ink: #9a3d12;
@@ -33,7 +32,6 @@
 		--border: rgba(255, 255, 255, 0.1);
 
 		--viz-done: #3987e5;
-		--viz-upcoming: #256abf;
 		--meter-track: #0d366b;
 
 		--accent-ink: #f0956d;
@@ -215,8 +213,10 @@ button {
 			background: var(--viz-done);
 		}
 
+		/* solid = held, striped = planned — pattern survives any display or
+		   color vision, unlike a second shade of the same hue */
 		&.upcoming {
-			background: var(--viz-upcoming);
+			background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
 		}
 	}
 
@@ -273,7 +273,7 @@ button {
 		}
 
 		&.upcoming {
-			background: var(--viz-upcoming);
+			background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
 		}
 	}
 }
@@ -294,18 +294,21 @@ button {
 			border-bottom: 1px solid var(--hairline);
 		}
 
+		/* filled dot = held, hollow ring = upcoming — same solid/planned
+		   language as the rhythm bars */
 		& .dot {
 			flex: none;
 			width: 8px;
 			height: 8px;
 			border-radius: 50%;
-			background: var(--viz-upcoming);
+			border: 2px solid var(--viz-done);
 		}
 
 		&.past {
 			color: var(--ink-2);
 
 			& .dot {
+				border: 0;
 				background: var(--viz-done);
 			}
 		}
@@ -314,6 +317,7 @@ button {
 			font-weight: 600;
 
 			& .dot {
+				border: 0;
 				background: var(--accent-mark);
 			}
 		}

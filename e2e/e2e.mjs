@@ -221,11 +221,30 @@ check(
 	geo.leftGap < 2 && geo.rightGap < 2,
 	`leftGap=${geo.leftGap.toFixed(1)} rightGap=${geo.rightGap.toFixed(1)}`,
 );
-const upColor = await page.$eval(
+const upStyle = await page.$eval(
 	'.strip .seg.upcoming',
-	(b) => getComputedStyle(b).backgroundColor,
+	(b) => getComputedStyle(b).backgroundImage,
 );
-check('upcoming mark contrast raised', upColor === 'rgb(85, 152, 231)', upColor);
+check(
+	'upcoming marks are striped',
+	upStyle.includes('repeating-linear-gradient'),
+	upStyle.slice(0, 40),
+);
+check(
+	'legend swatch paints exactly what the bars paint',
+	await page.evaluate(() => {
+		const styleOf = (sel) => {
+			const el = document.querySelector(sel);
+			if (!el) return null;
+			const s = getComputedStyle(el);
+			return `${s.backgroundColor}|${s.backgroundImage}`;
+		};
+		return (
+			styleOf('.legend .swatch.upcoming') === styleOf('.strip .seg.upcoming') &&
+			styleOf('.legend .swatch.done') !== null
+		);
+	}),
+);
 
 const pastOnly = encodeGroup({
 	title: 'P',
