@@ -10,7 +10,7 @@
 	--border: rgba(11, 11, 11, 0.1);
 
 	--viz-done: #2a78d6;
-	--viz-upcoming: #86b6ef;
+	--viz-upcoming: #5598e7;
 	--meter-track: #cde2fb;
 
 	--accent-ink: #9a3d12;
@@ -33,7 +33,7 @@
 		--border: rgba(255, 255, 255, 0.1);
 
 		--viz-done: #3987e5;
-		--viz-upcoming: #184f95;
+		--viz-upcoming: #256abf;
 		--meter-track: #0d366b;
 
 		--accent-ink: #f0956d;
@@ -191,6 +191,7 @@ button {
 .strip {
 	display: flex;
 	align-items: flex-end;
+	justify-content: space-between;
 	gap: 3px;
 	height: 64px;
 }
