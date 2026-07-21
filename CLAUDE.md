@@ -1,0 +1,28 @@
+# psycho-group-progress
+
+Static group-progress visualiser (GitHub Pages). No bundler, no minifier, no
+runtime dependencies, no frameworks — plain ES modules served as authored.
+
+## Hard rules
+
+- **Browser support: Baseline widely available.** No `light-dark()`, no
+  Temporal, no polyfills. Theme via `prefers-color-scheme` + `color-scheme`.
+  CSS nesting and `:has()` are fine.
+- **JS + JSDoc types only** (`tsc --noEmit --checkJs`, strict). No `.ts`.
+- **Tabs, not spaces**, everywhere.
+- **Conventional commits** (commitlint enforces), **subject line only** — no
+  body, no `Co-Authored-By` or other trailers.
+- **Never commit specs, plans or design docs.** They live outside the repo
+  in `~/.claude/specs/psycho-group-progress/`.
+- **Dates are never rendered numeric** (`18.06` caused a real missed
+  session). Weekday + spelled month via `Intl.DateTimeFormat`, always.
+- Pure logic lives in `src/lib.js` (unit-tested, no DOM); DOM only in
+  `src/app.js`; UI strings only in `src/i18n.js` (en + ru, same key sets).
+- Group data is encoded in the URL hash (`#d=`, versioned schema `v: 1`,
+  UTF-8-safe base64url). Titles are user input — escape on render.
+
+## Commands
+
+- `npm run check` — the gate: typecheck + lint + format check + tests.
+- `npm test` — Node built-in runner, tests in `test/`.
+- `npx -y serve .` — local serving (modules need http).
