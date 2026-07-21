@@ -106,3 +106,35 @@ test('findNextSession returns null when everything ended or list is empty', () =
 	assert.equal(findNextSession(fixture, new Date(2026, 1, 1)), null);
 	assert.equal(findNextSession([], new Date(2026, 0, 1)), null);
 });
+
+import { weekStartOf, weeklyBuckets } from '../src/lib.js';
+
+test('weekStartOf snaps to Monday', () => {
+	assert.deepEqual(weekStartOf(new Date(2026, 5, 18)), new Date(2026, 5, 15)); // Thu -> Mon
+	assert.deepEqual(weekStartOf(new Date(2026, 5, 21)), new Date(2026, 5, 15)); // Sun -> Mon
+	assert.deepEqual(weekStartOf(new Date(2026, 5, 15)), new Date(2026, 5, 15)); // Mon stays
+});
+
+test('weeklyBuckets spans first..last week, keeps empty weeks, tags status', () => {
+	const sessions = parseSessions([
+		{ date: '2026-06-02', start: '19:00', end: '22:00' }, // Tue, week of Jun 1, 3 h
+		{ date: '2026-06-18', start: '19:00', end: '23:00' }, // Thu, week of Jun 15, 4 h
+	]);
+	const buckets = weeklyBuckets(sessions, new Date(2026, 5, 10, 12, 0)); // Wed, week of Jun 8
+	assert.equal(buckets.length, 3);
+	assert.deepEqual(
+		buckets.map((b) => b.hours),
+		[3, 0, 4],
+	);
+	assert.deepEqual(
+		buckets.map((b) => b.status),
+		['past', 'current', 'future'],
+	);
+	assert.deepEqual(buckets[0].weekStart, new Date(2026, 5, 1));
+	assert.deepEqual(buckets[1].weekStart, new Date(2026, 5, 8));
+	assert.deepEqual(buckets[2].weekStart, new Date(2026, 5, 15));
+});
+
+test('weeklyBuckets of nothing is empty', () => {
+	assert.deepEqual(weeklyBuckets([], new Date()), []);
+});

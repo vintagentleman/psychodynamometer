@@ -98,3 +98,52 @@ export function findNextSession(sessions, now) {
 	if (session === undefined) return null;
 	return { session, inProgress: session.startDT <= now };
 }
+
+/** @typedef {{ weekStart: Date, hours: number, status: 'past' | 'current' | 'future' }} WeekBucket */
+
+/**
+ * Monday 00:00 local of the week containing the given date.
+ * @param {Date} date
+ * @returns {Date}
+ */
+export function weekStartOf(date) {
+	const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+	monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+	return monday;
+}
+
+/**
+ * One bucket per calendar week from the first session's week through the
+ * last's — weeks without sessions stay in, with zero hours (visible gaps).
+ * @param {Session[]} sessions
+ * @param {Date} now
+ * @returns {WeekBucket[]}
+ */
+export function weeklyBuckets(sessions, now) {
+	if (sessions.length === 0) return [];
+	const sorted = [...sessions].sort((a, b) => a.startDT.getTime() - b.startDT.getTime());
+	const firstWeek = weekStartOf(sorted[0].startDT);
+	const lastWeek = weekStartOf(sorted[sorted.length - 1].startDT);
+	const nowWeek = weekStartOf(now).getTime();
+	/** @type {WeekBucket[]} */
+	const buckets = [];
+	for (
+		const cursor = new Date(firstWeek);
+		cursor <= lastWeek;
+		cursor.setDate(cursor.getDate() + 7)
+	) {
+		const weekStart = new Date(cursor);
+		const weekEnd = new Date(weekStart);
+		weekEnd.setDate(weekEnd.getDate() + 7);
+		const hours = sorted
+			.filter((s) => s.startDT >= weekStart && s.startDT < weekEnd)
+			.reduce((sum, s) => sum + s.hours, 0);
+		const time = weekStart.getTime();
+		buckets.push({
+			weekStart,
+			hours,
+			status: time === nowWeek ? 'current' : time < nowWeek ? 'past' : 'future',
+		});
+	}
+	return buckets;
+}
