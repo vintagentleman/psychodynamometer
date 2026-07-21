@@ -17,7 +17,8 @@ import { resolveLocale, t } from './i18n.js';
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
 
 const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
-let locale = resolveLocale(navigator.language, null);
+let locale = resolveLocale(navigator.language, localStorage.getItem('lang'));
+document.documentElement.lang = locale;
 
 /** @param {unknown} value */
 function esc(value) {
@@ -25,6 +26,26 @@ function esc(value) {
 		/[&<>"']/g,
 		(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
 	);
+}
+
+function langToggleHTML() {
+	const button = (/** @type {import('./i18n.js').Locale} */ lang) =>
+		`<button type="button" class="lang${locale === lang ? ' active' : ''}" data-lang="${lang}" aria-pressed="${locale === lang}">${lang.toUpperCase()}</button>`;
+	return `<div class="lang-toggle" role="group" aria-label="Language / Язык">${button('en')}${button('ru')}</div>`;
+}
+
+/** @param {() => void} rerender */
+function wireLangToggle(rerender) {
+	for (const button of app.querySelectorAll('button.lang')) {
+		button.addEventListener('click', () => {
+			const lang = /** @type {HTMLElement} */ (button).dataset.lang;
+			if (lang !== 'en' && lang !== 'ru') return;
+			locale = lang;
+			localStorage.setItem('lang', lang);
+			document.documentElement.lang = lang;
+			rerender();
+		});
+	}
 }
 
 function currentPayload() {
@@ -138,7 +159,8 @@ function renderView(data) {
 		locale,
 		'edit',
 	)}</button></footer>`;
-	app.innerHTML = viewHTML(data, new Date(), footer);
+	app.innerHTML = langToggleHTML() + viewHTML(data, new Date(), footer);
+	wireLangToggle(() => renderView(data));
 	/** @type {HTMLElement} */ (app.querySelector('#edit')).addEventListener('click', () =>
 		renderBuild(data, false),
 	);
@@ -190,7 +212,7 @@ function isComplete(draft) {
 function renderBuild(data, badLink) {
 	const rows =
 		data !== null && data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
-	app.innerHTML = `
+	app.innerHTML = `${langToggleHTML()}
 		<article class="page build">
 			<header class="masthead"><h1>${t(locale, 'buildTitle')}</h1></header>
 			${badLink ? `<p class="note">${t(locale, 'badLink')}</p>` : ''}
@@ -214,6 +236,7 @@ function renderBuild(data, badLink) {
 	const rowsBox = /** @type {HTMLElement} */ (app.querySelector('#rows'));
 	const preview = /** @type {HTMLElement} */ (app.querySelector('#preview'));
 	const copyButton = /** @type {HTMLButtonElement} */ (app.querySelector('#copy-link'));
+	wireLangToggle(() => renderBuild(readForm(), badLink));
 
 	const update = () => {
 		for (const row of rowsBox.querySelectorAll('.row')) {
