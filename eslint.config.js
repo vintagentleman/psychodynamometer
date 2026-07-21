@@ -14,5 +14,9 @@ export default [
 		files: ['test/**/*.js'],
 		languageOptions: { globals: { ...globals.node } },
 	},
+	{
+		files: ['e2e/**/*.mjs'],
+		languageOptions: { globals: { ...globals.node, ...globals.browser } },
+	},
 	{ ignores: ['.superpowers/'] },
 ];
