@@ -14,6 +14,20 @@ export function encodeGroup(data) {
 }
 
 /**
+ * @param {unknown} session
+ * @returns {boolean}
+ */
+function isValidSessionShape(session) {
+	if (session === null || typeof session !== 'object') return false;
+	const candidate = /** @type {Record<string, unknown>} */ (session);
+	return (
+		typeof candidate.date === 'string' &&
+		typeof candidate.start === 'string' &&
+		typeof candidate.end === 'string'
+	);
+}
+
+/**
  * Decode a hash payload back into group data. Null on any malformation.
  * @param {string} payload
  * @returns {GroupData | null}
@@ -29,7 +43,10 @@ export function decodeGroup(payload) {
 			data.v !== 1 ||
 			typeof data.title !== 'string' ||
 			typeof data.targetHours !== 'number' ||
-			!Array.isArray(data.sessions)
+			!Number.isFinite(data.targetHours) ||
+			data.targetHours < 0 ||
+			!Array.isArray(data.sessions) ||
+			!data.sessions.every(isValidSessionShape)
 		) {
 			return null;
 		}

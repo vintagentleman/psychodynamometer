@@ -156,3 +156,41 @@ test('hours localise decimal separators', () => {
 	assert.equal(formatHoursNum(28.5, 'ru'), '28,5');
 	assert.equal(formatHoursNum(4, 'en'), '4');
 });
+
+test('decode returns null on non-object session elements', () => {
+	assert.equal(
+		decodeGroup(btoa(JSON.stringify({ v: 1, title: 'x', targetHours: 10, sessions: [null] }))),
+		null,
+	);
+	assert.equal(
+		decodeGroup(btoa(JSON.stringify({ v: 1, title: 'x', targetHours: 10, sessions: [42] }))),
+		null,
+	);
+});
+
+test('decode returns null on session missing start/end', () => {
+	assert.equal(
+		decodeGroup(
+			btoa(
+				JSON.stringify({
+					v: 1,
+					title: 'x',
+					targetHours: 10,
+					sessions: [{ date: '2026-01-01' }],
+				}),
+			),
+		),
+		null,
+	);
+});
+
+test('decode returns null on non-finite targetHours', () => {
+	assert.equal(decodeGroup(btoa('{"v":1,"title":"x","targetHours":1e999,"sessions":[]}')), null);
+});
+
+test('decode returns null on negative targetHours', () => {
+	assert.equal(
+		decodeGroup(btoa(JSON.stringify({ v: 1, title: 'x', targetHours: -5, sessions: [] }))),
+		null,
+	);
+});
