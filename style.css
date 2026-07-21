@@ -261,10 +261,12 @@ button {
 	}
 
 	& .swatch {
+		/* big enough that edge anti-aliasing doesn't shift the perceived
+		   color away from the bars it stands for */
 		display: inline-block;
-		width: 10px;
-		height: 10px;
-		border-radius: 3px;
+		width: 13px;
+		height: 13px;
+		border-radius: 2px;
 
 		&.done {
 			background: var(--viz-done);
