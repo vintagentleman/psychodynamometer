@@ -9,6 +9,7 @@ import {
 	formatDateShort,
 	formatDateLong,
 	formatMonth,
+	formatWeekRange,
 	formatHoursNum,
 } from './lib.js';
 import { resolveLocale, t } from './i18n.js';
@@ -162,7 +163,7 @@ function viewFragment(data, now, withFooter = false) {
 		if (bucket.doneHours > 0) {
 			bar.appendChild(segment('done', bucket.doneHours / total));
 		}
-		slotEl.title = `${formatDateShort(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
+		slotEl.title = `${formatWeekRange(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
 			hours: formatHoursNum(total, locale),
 		})}`;
 		strip.appendChild(slotEl);

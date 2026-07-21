@@ -194,6 +194,22 @@ export function formatMonth(date, locale) {
 }
 
 /**
+ * Monday-to-Sunday range of the week starting at weekStart, e.g. "17 – 23 Aug".
+ * @param {Date} weekStart
+ * @param {string} locale
+ */
+export function formatWeekRange(weekStart, locale) {
+	const weekEnd = new Date(weekStart);
+	weekEnd.setDate(weekEnd.getDate() + 6);
+	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
+		day: 'numeric',
+		month: 'short',
+	})
+		.formatRange(weekStart, weekEnd)
+		.replace(/\s/g, ' '); // ICU emits narrow no-break spaces; engines disagree
+}
+
+/**
  * @param {number} hours
  * @param {string} locale
  */

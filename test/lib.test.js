@@ -163,7 +163,13 @@ test('weeklyBuckets of nothing is empty', () => {
 	assert.deepEqual(weeklyBuckets([], new Date()), []);
 });
 
-import { formatDateShort, formatDateLong, formatMonth, formatHoursNum } from '../src/lib.js';
+import {
+	formatDateShort,
+	formatDateLong,
+	formatMonth,
+	formatWeekRange,
+	formatHoursNum,
+} from '../src/lib.js';
 
 test('dates render spelled out, never numeric-ambiguous', () => {
 	const thu = new Date(2026, 5, 18);
@@ -173,6 +179,14 @@ test('dates render spelled out, never numeric-ambiguous', () => {
 	assert.equal(formatDateLong(jul, 'en'), 'Thursday 23 July');
 	assert.equal(formatDateLong(jul, 'ru'), 'четверг, 23 июля');
 	assert.equal(formatMonth(thu, 'en'), 'Jun');
+});
+
+test('week ranges span monday to sunday, localised', () => {
+	assert.equal(formatWeekRange(new Date(2026, 7, 17), 'en'), '17 – 23 Aug');
+	assert.equal(formatWeekRange(new Date(2026, 7, 17), 'ru'), '17–23 авг.');
+	// a week crossing a month boundary names both months
+	assert.equal(formatWeekRange(new Date(2026, 5, 29), 'en'), '29 Jun – 5 Jul');
+	assert.equal(formatWeekRange(new Date(2026, 5, 29), 'ru'), '29 июн. – 5 июл.');
 });
 
 test('hours localise decimal separators', () => {
