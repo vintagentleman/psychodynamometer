@@ -340,3 +340,57 @@ test('formatted hours use a plain space, not NBSP, as the ru group separator', (
 	assert.equal(out, '1 200');
 	assert.doesNotMatch(out, /[\u00a0\u202f]/); // no NBSP / narrow NBSP the engines disagree on
 });
+
+import { zonedToInstant, zonedCivilDate, formatOffsetTag, formatLocalTime } from '../src/lib.js';
+
+test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
+	// asserted against Date.UTC(...), so these hold under any host TZ
+	assert.equal(
+		zonedToInstant({ y: 2026, mo: 6, d: 18, h: 19, mi: 0 }, 'Europe/Moscow'),
+		Date.UTC(2026, 5, 18, 16, 0), // Moscow is UTC+3, no DST
+	);
+	assert.equal(
+		zonedToInstant({ y: 2026, mo: 1, d: 15, h: 9, mi: 0 }, 'America/New_York'),
+		Date.UTC(2026, 0, 15, 14, 0), // EST, UTC-5
+	);
+	assert.equal(
+		zonedToInstant({ y: 2026, mo: 7, d: 15, h: 9, mi: 0 }, 'America/New_York'),
+		Date.UTC(2026, 6, 15, 13, 0), // EDT, UTC-4
+	);
+});
+
+test('zonedToInstant is correct on both sides of a DST transition', () => {
+	// Europe/London springs forward 2026-03-29 01:00 GMT -> 02:00 BST
+	assert.equal(
+		zonedToInstant({ y: 2026, mo: 3, d: 29, h: 0, mi: 30 }, 'Europe/London'),
+		Date.UTC(2026, 2, 29, 0, 30), // still GMT (UTC+0)
+	);
+	assert.equal(
+		zonedToInstant({ y: 2026, mo: 3, d: 29, h: 3, mi: 0 }, 'Europe/London'),
+		Date.UTC(2026, 2, 29, 2, 0), // now BST (UTC+1)
+	);
+});
+
+test('zonedCivilDate expresses an instant as the group-zone civil date', () => {
+	// 20:00 UTC on Jun 14 is 23:00 Moscow (same day)
+	assert.deepEqual(
+		zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 20, 0)), 'Europe/Moscow'),
+		new Date(2026, 5, 14),
+	);
+	// 22:00 UTC on Jun 14 is 01:00 Moscow the next day
+	assert.deepEqual(
+		zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 22, 0)), 'Europe/Moscow'),
+		new Date(2026, 5, 15),
+	);
+});
+
+test('formatOffsetTag renders the zone offset', () => {
+	assert.equal(formatOffsetTag(Date.UTC(2026, 5, 18, 16, 0), 'Europe/Moscow', 'en'), 'GMT+3');
+	assert.equal(formatOffsetTag(Date.UTC(2026, 0, 15, 14, 0), 'America/New_York', 'en'), 'GMT-5');
+});
+
+test('formatLocalTime renders HH:MM', () => {
+	// value is viewer-local (host-dependent); assert only the shape here \u2014 the
+	// localised value is asserted in e2e where the browser timezone is pinned
+	assert.match(formatLocalTime(Date.UTC(2026, 5, 18, 16, 0), 'en'), /^\d{2}:\d{2}$/);
+});
