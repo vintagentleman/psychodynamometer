@@ -18,9 +18,12 @@ runtime dependencies, no frameworks — plain ES modules served as authored.
   session). Weekday + spelled month via `Intl.DateTimeFormat`, always.
 - Pure logic lives in `src/lib.js` (unit-tested, no DOM); DOM only in
   `src/app.js`; UI strings only in `src/i18n.js` (en + ru, same key sets).
-- Group data is encoded in the URL hash: `#d=2~<targetHours>~<sessions>~<title>`
-  — sessions are `_`-joined `YYMMDD.HHMM.HHMM`, the title is percent-encoded
-  and always last (see `src/lib.js`). No pre-v2 compatibility exists.
+- Group data is encoded in the URL hash as `#d=<base64url token>`. The token
+  is a binary blob — format marker, target in half-hours, session count, one
+  5-byte record per session (packed date + start/end minute-of-day), then the
+  UTF-8 title — base64url-encoded (see `src/lib.js`). It carries no readable
+  structure by design; a payload that fails to decode shows the "build a fresh
+  one" screen.
 - User data reaches the DOM only via `<template>` cloning and
   `textContent`/attribute setters — never string-built HTML. Markup lives in
   `index.html` templates; `src/app.js` only clones and fills them.
