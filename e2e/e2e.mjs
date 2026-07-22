@@ -76,7 +76,7 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 // --- View mode ---
 await page.goto(url);
 check('masthead title', (await page.textContent('.masthead h1')) === 'Tuesday Group');
-const masthead = (await page.textContent('.masthead-hours')) ?? '';
+const masthead = (await page.textContent('.subline')) ?? '';
 check('masthead hours line', /of 41.5 contracted hours/.test(masthead), masthead.trim());
 const hero = (await page.textContent('.hero')) ?? '';
 check('hero percent + remaining', /%/.test(hero) && /h left/.test(hero), hero.trim());
@@ -155,17 +155,21 @@ await page.click('#edit');
 check('edit prefills 11 rows', (await page.$$('#rows .row')).length === 11);
 check('edit prefills title', (await page.inputValue('input[name="title"]')) === 'Tuesday Group');
 
-// --- Build mode from scratch ---
+// --- Edit (build) mode from scratch ---
 await page.goto(`${BASE}/`);
-check('no hash -> build mode', (await page.$$('#build')).length === 1);
-check('preview hint shown', ((await page.textContent('#preview')) ?? '').includes('Fill in'));
+check('no hash -> edit mode', (await page.$$('.page.editing')).length === 1);
+check('starts with a blank row', (await page.$$('#rows .row')).length === 1);
+check('empty edit reads zero', ((await page.textContent('.hero-value')) ?? '').trim() === '0%');
 await page.fill('input[name="title"]', 'Test Group');
 await page.fill('input[name="targetHours"]', '10');
 await page.fill('input[name="date"]', '2026-01-05');
 await page.fill('input[name="start"]', '10:00');
 await page.fill('input[name="end"]', '13:00');
-check('live preview renders', (await page.$$('#preview .page')).length === 1);
-check('preview shows title', (await page.textContent('#preview .masthead h1')) === 'Test Group');
+check(
+	'live glance updates while editing',
+	((await page.textContent('.hero-value')) ?? '') !== '0%',
+);
+check('live rhythm renders a bar', (await page.$$('.strip .bar')).length >= 1);
 
 await page.fill('input[name="end"]', '09:00');
 check('invalid row flagged', (await page.$$('#rows .row.invalid')).length === 1);
@@ -228,8 +232,8 @@ check('copied link round-trips', (await page.textContent('.masthead h1')) === 'T
 // --- Bad hash ---
 await page.goto(`${BASE}/#d=%%%garbage%%%`);
 check(
-	'bad hash -> build + note',
-	(await page.$$('#build')).length === 1 && (await page.isVisible('.note-badlink')),
+	'bad hash -> edit + note',
+	(await page.$$('.page.editing')).length === 1 && (await page.isVisible('.note-badlink')),
 );
 check(
 	'bad-link note text',
@@ -361,12 +365,12 @@ check(
 );
 await page.goto(`${BASE}/`);
 const buildPanes = await page.evaluate(() => {
-	const form = document.querySelector('#build')?.getBoundingClientRect();
-	const preview = document.querySelector('.preview-pane')?.getBoundingClientRect();
-	if (!form || !preview) return null;
-	return preview.left >= form.right - 1;
+	const prog = document.querySelector('.sec-progress')?.getBoundingClientRect();
+	const sched = document.querySelector('.sec-schedule')?.getBoundingClientRect();
+	if (!prog || !sched) return null;
+	return sched.left >= prog.right - 1;
 });
-check('desktop: preview beside form', buildPanes === true);
+check('desktop: schedule editor beside glance', buildPanes === true);
 await page.setViewportSize({ width: 400, height: 900 });
 await page.goto(url);
 const stacked = await page.evaluate(() => {

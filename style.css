@@ -120,6 +120,45 @@ button {
 		color: var(--ink-2);
 		font-size: 13px;
 	}
+
+	& .title-input {
+		width: 100%;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-bottom: 1px dashed var(--hairline);
+		background: none;
+		font: inherit;
+		font-size: 20px;
+		font-weight: 700;
+		color: var(--ink);
+	}
+
+	& .title-input:focus-visible {
+		outline: none;
+		border-bottom-color: var(--viz-done);
+	}
+
+	& .target-field {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 6px;
+	}
+
+	& .target-field input {
+		width: 5.5em;
+		font: inherit;
+		padding: 3px 7px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--surface);
+		color: var(--ink);
+	}
+
+	& .note-badlink {
+		margin: 10px 0 0;
+		color: var(--accent-ink);
+	}
 }
 
 .block {
@@ -340,19 +379,15 @@ button {
 	font-size: 13px;
 }
 
-.build {
-	& form {
+.schedule-slot {
+	& #rows {
 		display: grid;
-		gap: 14px;
+		gap: 6px;
 	}
 
-	& .field {
-		display: grid;
-		gap: 4px;
-		font-size: 13px;
-		color: var(--ink-2);
-	}
-
+	/* stylelint-disable-next-line no-descending-specificity --
+	   the masthead target-hours input is a different element; there is no real
+	   cascade conflict with these schedule inputs to reorder around. */
 	& input {
 		font: inherit;
 		padding: 8px 10px;
@@ -360,36 +395,6 @@ button {
 		border-radius: 8px;
 		background: var(--surface);
 		color: var(--ink);
-	}
-
-	& fieldset {
-		margin: 0;
-		padding: 0;
-		border: 0;
-		display: grid;
-		gap: 8px;
-	}
-
-	& legend {
-		padding: 0;
-		margin-bottom: 4px;
-		font-size: 11px;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: var(--muted);
-	}
-
-	& #rows {
-		display: grid;
-		gap: 6px;
-	}
-
-	& .note-copyerror {
-		margin: 0;
-		color: var(--invalid);
-		background: none;
-		padding: 0;
 	}
 
 	& .row {
@@ -411,24 +416,23 @@ button {
 		}
 	}
 
+	& #add-row {
+		margin-top: 8px;
+	}
+
 	& .remove {
 		flex: none;
 		background: var(--surface);
 		color: var(--muted);
 		font-weight: 400;
 	}
+}
 
-	& .preview-label {
-		margin: 18px 20px 8px;
-	}
-
-	& #preview {
-		padding: 0 20px 20px;
-
-		& .page {
-			border-radius: 10px;
-		}
-	}
+.page-actions .note-copyerror {
+	margin: 8px 0 0;
+	color: var(--invalid);
+	background: none;
+	padding: 0;
 }
 
 @media (width >= 900px) {
@@ -436,7 +440,7 @@ button {
 		max-width: 920px;
 	}
 
-	.page.view {
+	.page {
 		display: grid;
 		grid-template:
 			'mast sched' auto
@@ -472,42 +476,6 @@ button {
 		& .page-actions {
 			grid-area: foot;
 			border-top: 1px solid var(--hairline);
-		}
-	}
-
-	#preview .page.view {
-		display: block;
-
-		& .sec-schedule {
-			border-left: 0;
-			border-top: 1px solid var(--hairline);
-		}
-	}
-
-	.page.build {
-		display: grid;
-		grid-template-columns: 1.05fr 1fr;
-		grid-template-areas:
-			'mast mast'
-			'note note'
-			'form preview';
-
-		& .masthead {
-			grid-area: mast;
-		}
-
-		& > .note {
-			grid-area: note;
-		}
-
-		& form {
-			grid-area: form;
-			align-content: start;
-		}
-
-		& .preview-pane {
-			grid-area: preview;
-			border-left: 1px solid var(--hairline);
 		}
 	}
 }

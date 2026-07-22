@@ -34,11 +34,12 @@
 			</div>
 		</template>
 
-		<template id="tpl-view">
-			<article class="page view">
+		<template id="tpl-page">
+			<article class="page">
 				<header class="masthead">
-					<h1></h1>
-					<p class="masthead-hours"></p>
+					<div class="title-slot"></div>
+					<p class="subline"></p>
+					<p class="note note-badlink" data-i18n="badLink" hidden></p>
 				</header>
 				<section class="block sec-progress">
 					<h2 class="label" data-i18n="progress"></h2>
@@ -64,10 +65,10 @@
 				</section>
 				<section class="block sec-schedule">
 					<h2 class="label" data-i18n="schedule"></h2>
-					<ol class="sessions"></ol>
+					<div class="schedule-slot"></div>
 				</section>
 				<footer class="page-actions">
-					<button type="button" class="ghost" id="edit" data-i18n="edit"></button>
+					<p class="note note-copyerror" role="status" hidden></p>
 				</footer>
 			</article>
 		</template>
@@ -86,32 +87,6 @@
 		></template>
 		<template id="tpl-seg"><div class="seg"></div></template>
 		<template id="tpl-axis-cell"><span class="axis-cell"></span></template>
-		<template id="tpl-hint"><p class="note" data-i18n="previewHint"></p></template>
-
-		<template id="tpl-build">
-			<article class="page build">
-				<header class="masthead"><h1 data-i18n="buildTitle"></h1></header>
-				<p class="note note-badlink" data-i18n="badLink" hidden></p>
-				<form id="build" class="block">
-					<label class="field"><span data-i18n="groupName"></span><input name="title" /></label>
-					<label class="field">
-						<span data-i18n="targetHours"></span>
-						<input name="targetHours" type="number" min="0" step="0.5" />
-					</label>
-					<fieldset>
-						<legend data-i18n="sessions"></legend>
-						<div id="rows"></div>
-						<button type="button" class="ghost" id="add-row" data-i18n="addSession"></button>
-					</fieldset>
-					<button type="button" id="copy-link" data-i18n="copyLink"></button>
-					<p class="note note-copyerror" role="status" hidden></p>
-				</form>
-				<div class="preview-pane">
-					<h2 class="label preview-label" data-i18n="preview"></h2>
-					<div id="preview"></div>
-				</div>
-			</article>
-		</template>
 
 		<template id="tpl-form-row">
 			<div class="row">

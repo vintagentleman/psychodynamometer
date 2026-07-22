@@ -16,6 +16,8 @@ import { resolveLocale, t } from './i18n.js';
 
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
+/** @typedef {import('./lib.js').Session} Session */
+/** @typedef {import('./lib.js').WeekBucket} WeekBucket */
 
 const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
 
@@ -41,8 +43,6 @@ document.documentElement.lang = locale;
 
 /**
  * Clone a template and resolve its data-i18n / data-i18n-aria bindings.
- * All markup lives in index.html templates; user data lands via
- * textContent only — nothing in this module concatenates HTML.
  * @param {string} id
  * @returns {DocumentFragment}
  */
@@ -70,7 +70,6 @@ function slot(root, selector) {
 }
 
 /**
- * One stacked segment of a rhythm bar, sized as a fraction of the bar.
  * @param {'done' | 'upcoming'} kind
  * @param {number} fraction
  */
@@ -96,109 +95,6 @@ function langToggleFragment() {
 	return fragment;
 }
 
-/**
- * The dashboard for one group, cloned from #tpl-view.
- * @param {GroupData} data
- * @param {Date} now
- * @param {boolean} [withFooter]
- * @returns {DocumentFragment}
- */
-function viewFragment(data, now, withFooter = false) {
-	const sessions = parseSessions(data.sessions);
-	const { completedHours, remainingHours, percent } = computeProgress(
-		sessions,
-		data.targetHours,
-		now,
-	);
-	const next = findNextSession(sessions, now);
-	const buckets = weeklyBuckets(sessions, now);
-	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
-
-	const fragment = cloneTemplate('tpl-view');
-	slot(fragment, 'h1').textContent = data.title;
-	slot(fragment, '.masthead-hours').textContent = t(locale, 'headerHours', {
-		completed: formatHoursNum(completedHours, locale),
-		target: formatHoursNum(data.targetHours, locale),
-	});
-
-	const rounded = Math.round(percent);
-	slot(fragment, '.hero-value').textContent = `${rounded}%`;
-	slot(fragment, '.hero-side').textContent =
-		` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
-	const meter = slot(fragment, '.meter');
-	meter.setAttribute('role', 'progressbar');
-	meter.setAttribute('aria-label', t(locale, 'progress'));
-	meter.setAttribute('aria-valuemin', '0');
-	meter.setAttribute('aria-valuemax', '100');
-	meter.setAttribute('aria-valuenow', String(rounded));
-	slot(fragment, '.meter-fill').style.width = `${percent}%`;
-
-	slot(fragment, '.next-when').textContent = next
-		? `${formatDateLong(next.session.startDT, locale)} · ${next.session.start}–${next.session.end}` +
-			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
-		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
-
-	const strip = slot(fragment, '.strip');
-	for (const bucket of buckets) {
-		const total = bucket.doneHours + bucket.upcomingHours;
-		const slotEl = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
-		const bar = /** @type {HTMLElement} */ (slotEl.querySelector('.bar'));
-		bar.style.height =
-			total === 0 ? '0' : `${Math.max(8, Math.round((total / maxWeekHours) * 100))}%`;
-		// Upcoming stacks on top of done; the color boundary is "now", so no
-		// separate today marker is needed (or possible to misplace).
-		if (bucket.upcomingHours > 0) {
-			bar.appendChild(segment('upcoming', bucket.upcomingHours / total));
-		}
-		if (bucket.doneHours > 0) {
-			bar.appendChild(segment('done', bucket.doneHours / total));
-		}
-		slotEl.title = `${formatWeekRange(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
-			hours: formatHoursNum(total, locale),
-		})}`;
-		strip.appendChild(slotEl);
-	}
-
-	// Month labels group the weeks they cover: one cell per month, sized by
-	// its week count and centered, so a label reads as belonging to the whole
-	// month's bars rather than to whichever bar happens to sit above it.
-	// Approximation: strip and axis share the 3px gap but differ in item
-	// count, so interior month boundaries drift from true bar spans by a few
-	// pixels (~2px worst case on realistic spans; zero at the edges).
-	const axis = slot(fragment, '.axis');
-	/** @type {{ month: string, weeks: number }[]} */
-	const months = [];
-	for (const bucket of buckets) {
-		const month = formatMonth(bucket.weekStart, locale);
-		const current = months[months.length - 1];
-		if (current !== undefined && current.month === month) current.weeks += 1;
-		else months.push({ month, weeks: 1 });
-	}
-	for (const group of months) {
-		const cell = /** @type {HTMLElement} */ (cloneTemplate('tpl-axis-cell').firstElementChild);
-		cell.textContent = group.month;
-		cell.style.flexGrow = String(group.weeks);
-		axis.appendChild(cell);
-	}
-
-	const list = slot(fragment, '.sessions');
-	for (const session of sessions) {
-		const row = cloneTemplate('tpl-session');
-		const item = /** @type {HTMLElement} */ (row.firstElementChild);
-		item.classList.toggle('past', session.endDT <= now);
-		item.classList.toggle('next', next !== null && session === next.session);
-		slot(row, '.date').textContent = formatDateShort(session.startDT, locale);
-		slot(row, '.time').textContent = `${session.start}–${session.end}`;
-		slot(row, '.hours').textContent = t(locale, 'hoursShort', {
-			hours: formatHoursNum(session.hours, locale),
-		});
-		list.appendChild(row);
-	}
-
-	if (!withFooter) slot(fragment, '.page-actions').remove();
-	return fragment;
-}
-
 /** @param {SessionInput} input */
 function sessionRow(input) {
 	const fragment = cloneTemplate('tpl-form-row');
@@ -206,27 +102,6 @@ function sessionRow(input) {
 	/** @type {HTMLInputElement} */ (slot(fragment, '[name="start"]')).value = input.start;
 	/** @type {HTMLInputElement} */ (slot(fragment, '[name="end"]')).value = input.end;
 	return fragment;
-}
-
-/**
- * Read the form back into (possibly incomplete) group data.
- * @returns {GroupData}
- */
-function readForm() {
-	const form = /** @type {HTMLFormElement} */ (app.querySelector('#build'));
-	const formData = new FormData(form);
-	const dates = formData.getAll('date');
-	const starts = formData.getAll('start');
-	const ends = formData.getAll('end');
-	return {
-		title: String(formData.get('title') ?? ''),
-		targetHours: Number(formData.get('targetHours')) || 0,
-		sessions: dates.map((date, i) => ({
-			date: String(date),
-			start: String(starts[i] ?? ''),
-			end: String(ends[i] ?? ''),
-		})),
-	};
 }
 
 /** @param {SessionInput} s */
@@ -256,6 +131,13 @@ function markRow(row, invalid) {
 	}
 }
 
+function markInvalidRows() {
+	for (const row of app.querySelectorAll('#rows .row')) {
+		const r = readRow(row);
+		markRow(row, r.filled && !r.valid);
+	}
+}
+
 /** @param {string} key */
 function showBuildError(key) {
 	const note = slot(app, '.note-copyerror');
@@ -267,6 +149,22 @@ function clearBuildError() {
 	slot(app, '.note-copyerror').hidden = true;
 }
 
+/**
+ * Read the edit-mode fields back into (possibly incomplete) group data.
+ * @returns {GroupData}
+ */
+function readForm() {
+	const title = /** @type {HTMLInputElement | null} */ (app.querySelector('input[name="title"]'));
+	const target = /** @type {HTMLInputElement | null} */ (
+		app.querySelector('input[name="targetHours"]')
+	);
+	const sessions = [...app.querySelectorAll('#rows .row')].map((row) => {
+		const [date, start, end] = [...row.querySelectorAll('input')].map((i) => i.value);
+		return { date, start, end };
+	});
+	return { title: title?.value ?? '', targetHours: Number(target?.value) || 0, sessions };
+}
+
 /** @param {GroupData} draft */
 function isComplete(draft) {
 	return (
@@ -274,73 +172,216 @@ function isComplete(draft) {
 	);
 }
 
-/** @type {{ mode: 'view' | 'build', data: GroupData | null, badLink: boolean }} */
-let state = { mode: 'build', data: null, badLink: false };
+/** @type {{ mode: 'view' | 'edit', data: GroupData | null, badLink: boolean }} */
+let state = { mode: 'edit', data: null, badLink: false };
 
 /**
- * Build (but do not wire) the group-builder form, cloned from #tpl-build.
- * @param {GroupData | null} data
- * @param {boolean} badLink
- * @returns {DocumentFragment}
+ * Recompute the derived regions — progress/meter, next, rhythm, and (view only)
+ * the masthead sub-line and schedule list — from `data`. Never touches inputs,
+ * so it is safe to call on every keystroke.
+ * @param {Element} page
+ * @param {GroupData} data
+ * @param {Date} now
+ * @param {'view' | 'edit'} mode
  */
-function buildFragment(data, badLink) {
-	const fragment = cloneTemplate('tpl-build');
-	if (badLink) slot(fragment, '.note-badlink').hidden = false;
-	else slot(fragment, '.note-badlink').remove();
+function fillDerived(page, data, now, mode) {
+	const sessions = parseSessions(data.sessions);
+	const { completedHours, remainingHours, percent } = computeProgress(
+		sessions,
+		data.targetHours,
+		now,
+	);
+	const next = findNextSession(sessions, now);
+	const buckets = weeklyBuckets(sessions, now);
 
-	const rowsBox = slot(fragment, '#rows');
-	const rows =
-		data !== null && data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
-	for (const input of rows) rowsBox.appendChild(sessionRow(input));
-	/** @type {HTMLInputElement} */ (slot(fragment, '[name="title"]')).value = data?.title ?? '';
-	/** @type {HTMLInputElement} */ (slot(fragment, '[name="targetHours"]')).value =
-		data !== null && data.targetHours > 0 ? String(data.targetHours) : '';
-	return fragment;
-}
-
-/**
- * Refresh the builder's per-row validity flags and live preview from the
- * current form values. The one surgical update we keep: the form inputs must
- * survive untouched — rebuilding them would drop the caret mid-type — so only
- * #preview and the row classes change here, never the inputs themselves.
- */
-function update() {
-	const liveRows = slot(app, '#rows');
-	const preview = slot(app, '#preview');
-	clearBuildError();
-	for (const row of liveRows.querySelectorAll('.row')) {
-		const r = readRow(row);
-		markRow(row, r.filled && !r.valid);
+	if (mode === 'view') {
+		slot(page, '.subline').textContent = t(locale, 'headerHours', {
+			completed: formatHoursNum(completedHours, locale),
+			target: formatHoursNum(data.targetHours, locale),
+		});
 	}
-	const draft = readForm();
-	if (isComplete(draft)) preview.replaceChildren(viewFragment(draft, new Date()));
-	else preview.replaceChildren(cloneTemplate('tpl-hint'));
+
+	const rounded = Math.round(percent);
+	slot(page, '.hero-value').textContent = `${rounded}%`;
+	slot(page, '.hero-side').textContent =
+		` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
+	const meter = slot(page, '.meter');
+	meter.setAttribute('role', 'progressbar');
+	meter.setAttribute('aria-label', t(locale, 'progress'));
+	meter.setAttribute('aria-valuemin', '0');
+	meter.setAttribute('aria-valuemax', '100');
+	meter.setAttribute('aria-valuenow', String(rounded));
+	slot(page, '.meter-fill').style.width = `${percent}%`;
+
+	slot(page, '.next-when').textContent = next
+		? `${formatDateLong(next.session.startDT, locale)} · ${next.session.start}–${next.session.end}` +
+			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
+		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
+
+	fillRhythm(page, buckets);
+
+	if (mode === 'view') fillScheduleView(page, sessions, next, now);
 }
 
 /**
- * Rebuild #app's children from state. Handlers live on #app itself (wired
- * once in wireApp) and #app survives every replaceChildren, so nothing here
- * re-attaches anything.
+ * @param {Element} page
+ * @param {WeekBucket[]} buckets
  */
-function render() {
-	if (state.mode === 'view' && state.data !== null) {
-		app.replaceChildren(langToggleFragment(), viewFragment(state.data, new Date(), true));
+function fillRhythm(page, buckets) {
+	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
+	const strip = slot(page, '.strip');
+	strip.replaceChildren();
+	for (const bucket of buckets) {
+		const total = bucket.doneHours + bucket.upcomingHours;
+		const slotEl = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
+		const bar = /** @type {HTMLElement} */ (slotEl.querySelector('.bar'));
+		bar.style.height =
+			total === 0 ? '0' : `${Math.max(8, Math.round((total / maxWeekHours) * 100))}%`;
+		if (bucket.upcomingHours > 0)
+			bar.appendChild(segment('upcoming', bucket.upcomingHours / total));
+		if (bucket.doneHours > 0) bar.appendChild(segment('done', bucket.doneHours / total));
+		slotEl.title = `${formatWeekRange(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
+			hours: formatHoursNum(total, locale),
+		})}`;
+		strip.appendChild(slotEl);
+	}
+
+	const axis = slot(page, '.axis');
+	axis.replaceChildren();
+	/** @type {{ month: string, weeks: number }[]} */
+	const months = [];
+	for (const bucket of buckets) {
+		const month = formatMonth(bucket.weekStart, locale);
+		const current = months[months.length - 1];
+		if (current !== undefined && current.month === month) current.weeks += 1;
+		else months.push({ month, weeks: 1 });
+	}
+	for (const group of months) {
+		const cell = /** @type {HTMLElement} */ (cloneTemplate('tpl-axis-cell').firstElementChild);
+		cell.textContent = group.month;
+		cell.style.flexGrow = String(group.weeks);
+		axis.appendChild(cell);
+	}
+}
+
+/**
+ * @param {Element} page
+ * @param {Session[]} sessions
+ * @param {{ session: Session, inProgress: boolean } | null} next
+ * @param {Date} now
+ */
+function fillScheduleView(page, sessions, next, now) {
+	const list = slot(page, '.schedule-slot');
+	const ol = document.createElement('ol');
+	ol.className = 'sessions';
+	for (const session of sessions) {
+		const row = cloneTemplate('tpl-session');
+		const item = /** @type {HTMLElement} */ (row.firstElementChild);
+		item.classList.toggle('past', session.endDT <= now);
+		item.classList.toggle('next', next !== null && session === next.session);
+		slot(row, '.date').textContent = formatDateShort(session.startDT, locale);
+		slot(row, '.time').textContent = `${session.start}–${session.end}`;
+		slot(row, '.hours').textContent = t(locale, 'hoursShort', {
+			hours: formatHoursNum(session.hours, locale),
+		});
+		ol.appendChild(row);
+	}
+	list.replaceChildren(ol);
+}
+
+/**
+ * Rebuild #app from state: one skeleton, editable regions rendered for the
+ * current mode. Handlers live on #app (wired once in wireApp) and survive every
+ * replaceChildren, so nothing here re-attaches anything.
+ */
+function renderPage() {
+	const data = state.data ?? { title: '', targetHours: 0, sessions: [] };
+	const mode = state.mode;
+	const page = /** @type {HTMLElement} */ (cloneTemplate('tpl-page').firstElementChild);
+	page.classList.toggle('editing', mode === 'edit');
+
+	const titleSlot = slot(page, '.title-slot');
+	if (mode === 'view') {
+		const h1 = document.createElement('h1');
+		h1.textContent = data.title;
+		titleSlot.appendChild(h1);
 	} else {
-		app.replaceChildren(langToggleFragment(), buildFragment(state.data, state.badLink));
-		update();
+		const input = document.createElement('input');
+		input.name = 'title';
+		input.className = 'title-input';
+		input.placeholder = t(locale, 'groupName');
+		input.value = data.title;
+		titleSlot.appendChild(input);
 	}
+
+	if (mode === 'edit') {
+		const label = document.createElement('label');
+		label.className = 'target-field';
+		const span = document.createElement('span');
+		span.textContent = t(locale, 'targetHours');
+		const input = document.createElement('input');
+		input.name = 'targetHours';
+		input.type = 'number';
+		input.min = '0';
+		input.step = '0.5';
+		if (data.targetHours > 0) input.value = String(data.targetHours);
+		label.append(span, input);
+		slot(page, '.subline').appendChild(label);
+	}
+
+	const schedSlot = slot(page, '.schedule-slot');
+	if (mode === 'edit') {
+		const rows = data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
+		const list = document.createElement('div');
+		list.id = 'rows';
+		for (const input of rows) list.appendChild(sessionRow(input));
+		const add = document.createElement('button');
+		add.type = 'button';
+		add.className = 'ghost';
+		add.id = 'add-row';
+		add.textContent = t(locale, 'addSession');
+		schedSlot.append(list, add);
+	}
+
+	const btn = document.createElement('button');
+	btn.type = 'button';
+	if (mode === 'view') {
+		btn.className = 'ghost';
+		btn.id = 'edit';
+		btn.textContent = t(locale, 'edit');
+	} else {
+		btn.id = 'copy-link';
+		btn.textContent = t(locale, 'copyLink');
+	}
+	slot(page, '.page-actions').prepend(btn);
+
+	if (mode === 'edit' && state.badLink) slot(page, '.note-badlink').hidden = false;
+
+	app.replaceChildren(langToggleFragment(), page);
+
+	fillDerived(page, mode === 'edit' ? readForm() : data, new Date(), mode);
+	if (mode === 'edit') markInvalidRows();
 }
 
 /**
- * Validate the builder, and on success copy a share link to the clipboard.
+ * Refresh the live glance (progress/next/rhythm) and row validity from the
+ * current form values, without rebuilding the inputs — so the caret survives.
+ */
+function refreshComputed() {
+	clearBuildError();
+	fillDerived(slot(app, '.page'), readForm(), new Date(), 'edit');
+	markInvalidRows();
+}
+
+/**
+ * Validate the edit fields, and on success copy a share link to the clipboard.
  * @param {HTMLButtonElement} copyButton
  */
 function copyLink(copyButton) {
-	update();
-	const liveRows = slot(app, '#rows');
+	refreshComputed();
 	const draft = readForm();
 	let blocked = false;
-	for (const row of liveRows.querySelectorAll('.row')) {
+	for (const row of app.querySelectorAll('#rows .row')) {
 		const r = readRow(row);
 		const bad = !r.blank && !r.valid;
 		markRow(row, bad);
@@ -369,8 +410,8 @@ function copyLink(copyButton) {
 }
 
 /**
- * Wire every handler once, on the stable #app root. Each render replaces
- * #app's children but never #app, so this delegation outlives all of them.
+ * Wire every handler once, on the stable #app root. Each render replaces #app's
+ * children but never #app, so this delegation outlives all of them.
  */
 function wireApp() {
 	app.addEventListener('click', (event) => {
@@ -383,31 +424,29 @@ function wireApp() {
 			locale = lang;
 			storeLang(lang);
 			document.documentElement.lang = lang;
-			// Capture what's typed so switching language mid-build keeps it.
-			if (state.mode === 'build') state = { ...state, data: readForm() };
-			render();
+			if (state.mode === 'edit') state = { ...state, data: readForm() };
+			renderPage();
 			return;
 		}
 
 		if (state.mode === 'view') {
 			if (target.closest('#edit') !== null) {
-				state = { mode: 'build', data: state.data, badLink: false };
-				render();
+				state = { mode: 'edit', data: state.data, badLink: false };
+				renderPage();
 			}
 			return;
 		}
 
 		if (target.closest('#add-row') !== null) {
 			slot(app, '#rows').appendChild(sessionRow({ date: '', start: '', end: '' }));
-			update();
+			refreshComputed();
 			return;
 		}
 		const removeButton = target.closest('.remove');
 		if (removeButton !== null) {
-			const liveRows = slot(app, '#rows');
-			if (liveRows.querySelectorAll('.row').length > 1) {
+			if (app.querySelectorAll('#rows .row').length > 1) {
 				removeButton.closest('.row')?.remove();
-				update();
+				refreshComputed();
 			}
 			return;
 		}
@@ -416,29 +455,29 @@ function wireApp() {
 	});
 
 	app.addEventListener('input', () => {
-		if (state.mode === 'build') update();
+		if (state.mode === 'edit') refreshComputed();
 	});
 }
 
 function route() {
 	const payload = currentPayload();
 	if (payload === null) {
-		state = { mode: 'build', data: null, badLink: false };
-		render();
+		state = { mode: 'edit', data: null, badLink: false };
+		renderPage();
 		return;
 	}
 	const data = decodeGroup(payload);
 	if (data === null) {
-		state = { mode: 'build', data: null, badLink: true };
-		render();
+		state = { mode: 'edit', data: null, badLink: true };
+		renderPage();
 		return;
 	}
 	state = { mode: 'view', data, badLink: false };
 	try {
-		render();
+		renderPage();
 	} catch {
-		state = { mode: 'build', data: null, badLink: true };
-		render();
+		state = { mode: 'edit', data: null, badLink: true };
+		renderPage();
 	}
 }
 
