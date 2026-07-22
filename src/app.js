@@ -1,7 +1,6 @@
 import {
 	decodeGroup,
 	encodeGroup,
-	parseSession,
 	parseSessions,
 	computeProgress,
 	progressSegments,
@@ -25,6 +24,14 @@ import {
 import { messages, t } from './i18n.js';
 import { app, locale, setLocale, state, setState, storeLang } from './app/store.js';
 import { cloneTemplate, slot, segment, sessionRow } from './app/dom.js';
+import {
+	readRow,
+	readForm,
+	markRow,
+	markInvalidRows,
+	showBuildError,
+	clearBuildError,
+} from './app/form.js';
 
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
@@ -46,70 +53,6 @@ function topbarFragment() {
 		button.setAttribute('aria-pressed', String(locale === lang));
 	}
 	return fragment;
-}
-
-/** @param {Element} row */
-function readRow(row) {
-	const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
-	const raw = { date, start, end };
-	return {
-		...raw,
-		filled: date !== '' && start !== '' && end !== '',
-		blank: isBlankInput(raw),
-		valid: parseSession(raw) !== null,
-	};
-}
-
-/**
- * @param {Element} row
- * @param {boolean} invalid
- */
-function markRow(row, invalid) {
-	row.classList.toggle('invalid', invalid);
-	for (const input of row.querySelectorAll('input')) {
-		if (invalid) input.setAttribute('aria-invalid', 'true');
-		else input.removeAttribute('aria-invalid');
-	}
-}
-
-function markInvalidRows() {
-	for (const row of app.querySelectorAll('#rows .row')) {
-		const r = readRow(row);
-		markRow(row, r.filled && !r.valid);
-	}
-}
-
-/** @param {string} key */
-function showBuildError(key) {
-	const note = slot(app, '.note-copyerror');
-	note.hidden = false;
-	note.textContent = t(locale, key);
-}
-
-function clearBuildError() {
-	slot(app, '.note-copyerror').hidden = true;
-}
-
-/**
- * Read the edit-mode fields back into (possibly incomplete) group data.
- * @returns {GroupData}
- */
-function readForm() {
-	const title = /** @type {HTMLInputElement | null} */ (app.querySelector('input[name="title"]'));
-	const target = /** @type {HTMLInputElement | null} */ (
-		app.querySelector('input[name="targetHours"]')
-	);
-	const sessions = [...app.querySelectorAll('#rows .row')].map((row) => {
-		const [date, start, end] = [...row.querySelectorAll('input')].map((i) => i.value);
-		return { date, start, end };
-	});
-	const zone = /** @type {HTMLSelectElement | null} */ (app.querySelector('#zone-select'));
-	return {
-		title: title?.value ?? '',
-		targetHours: Number(target?.value) || 0,
-		timeZone: zone?.value || detectedZone(),
-		sessions,
-	};
 }
 
 /**
