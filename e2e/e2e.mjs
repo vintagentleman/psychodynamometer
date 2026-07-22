@@ -160,6 +160,14 @@ check('edit offers a done toggle', (await page.$$('#done')).length === 1);
 // --- Edit (build) mode from scratch ---
 await page.goto(`${BASE}/`);
 check('no hash -> edit mode', (await page.$$('.page.editing')).length === 1);
+check(
+	'edit target is an inline input in the subline',
+	(await page.$$('.subline input[name="targetHours"]')).length === 1,
+);
+check(
+	'edit subline mirrors the view phrasing',
+	((await page.textContent('.subline')) ?? '').includes('contracted hours'),
+);
 check('starts with a blank row', (await page.$$('#rows .row')).length === 1);
 check('empty edit reads zero', ((await page.textContent('.hero-value')) ?? '').trim() === '0%');
 await page.fill('input[name="title"]', 'Test Group');

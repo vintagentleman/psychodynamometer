@@ -12,7 +12,7 @@ import {
 	formatWeekRange,
 	formatHoursNum,
 } from './lib.js';
-import { resolveLocale, t } from './i18n.js';
+import { messages, resolveLocale, t } from './i18n.js';
 
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
@@ -194,12 +194,8 @@ function fillDerived(page, data, now, mode) {
 	const next = findNextSession(sessions, now);
 	const buckets = weeklyBuckets(sessions, now);
 
-	if (mode === 'view') {
-		slot(page, '.subline').textContent = t(locale, 'headerHours', {
-			completed: formatHoursNum(completedHours, locale),
-			target: formatHoursNum(data.targetHours, locale),
-		});
-	}
+	const completedSpan = page.querySelector('.subline-completed');
+	if (completedSpan !== null) completedSpan.textContent = formatHoursNum(completedHours, locale);
 
 	const rounded = Math.round(percent);
 	slot(page, '.hero-value').textContent = `${rounded}%`;
@@ -290,6 +286,42 @@ function fillScheduleView(page, sessions, next, now) {
 }
 
 /**
+ * Build the masthead sub-line "{completed} of {target} …". The target is plain
+ * text in view and an inline input in edit; the completed figure lives in a
+ * .subline-completed span that fillDerived updates in place, so editing the
+ * target never rebuilds it and the caret survives.
+ * @param {Element} page
+ * @param {number} targetHours
+ * @param {'view' | 'edit'} mode
+ */
+function buildSubline(page, targetHours, mode) {
+	const subline = slot(page, '.subline');
+	const template = messages[locale].headerHours ?? messages.en.headerHours ?? '';
+	subline.replaceChildren();
+	for (const part of template.split(/(\{completed\}|\{target\})/)) {
+		if (part === '{completed}') {
+			const span = document.createElement('span');
+			span.className = 'subline-completed';
+			subline.appendChild(span);
+		} else if (part === '{target}' && mode === 'edit') {
+			const input = document.createElement('input');
+			input.name = 'targetHours';
+			input.type = 'number';
+			input.min = '0';
+			input.step = '0.5';
+			input.className = 'target-input';
+			input.setAttribute('aria-label', t(locale, 'targetHours'));
+			if (targetHours > 0) input.value = String(targetHours);
+			subline.appendChild(input);
+		} else if (part === '{target}') {
+			subline.appendChild(document.createTextNode(formatHoursNum(targetHours, locale)));
+		} else if (part !== '') {
+			subline.appendChild(document.createTextNode(part));
+		}
+	}
+}
+
+/**
  * Rebuild #app from state: one skeleton, editable regions rendered for the
  * current mode. Handlers live on #app (wired once in wireApp) and survive every
  * replaceChildren, so nothing here re-attaches anything.
@@ -314,20 +346,7 @@ function renderPage() {
 		titleSlot.appendChild(input);
 	}
 
-	if (mode === 'edit') {
-		const label = document.createElement('label');
-		label.className = 'target-field';
-		const span = document.createElement('span');
-		span.textContent = t(locale, 'targetHours');
-		const input = document.createElement('input');
-		input.name = 'targetHours';
-		input.type = 'number';
-		input.min = '0';
-		input.step = '0.5';
-		if (data.targetHours > 0) input.value = String(data.targetHours);
-		label.append(span, input);
-		slot(page, '.subline').appendChild(label);
-	}
+	buildSubline(page, data.targetHours, mode);
 
 	const schedSlot = slot(page, '.schedule-slot');
 	if (mode === 'edit') {

@@ -139,16 +139,10 @@ button {
 		border-bottom-color: var(--viz-done);
 	}
 
-	& .target-field {
-		display: inline-flex;
-		align-items: baseline;
-		gap: 6px;
-	}
-
-	& .target-field input {
-		width: 5.5em;
+	& .target-input {
+		width: 4.5em;
 		font: inherit;
-		padding: 3px 7px;
+		padding: 2px 6px;
 		border: 1px solid var(--border);
 		border-radius: 8px;
 		background: var(--surface);
@@ -387,9 +381,6 @@ button {
 		gap: 6px;
 	}
 
-	/* stylelint-disable-next-line no-descending-specificity --
-	   the masthead target-hours input is a different element; there is no real
-	   cascade conflict with these schedule inputs to reorder around. */
 	& input {
 		font: inherit;
 		padding: 8px 10px;
