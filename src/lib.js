@@ -39,7 +39,11 @@ export function decodeGroup(payload) {
 			const match = SESSION_TOKEN.exec(token);
 			if (match === null) return null;
 			const [, yy, mo, dd, sh, sm, eh, em] = match;
-			sessions.push({ date: `20${yy}-${mo}-${dd}`, start: `${sh}:${sm}`, end: `${eh}:${em}` });
+			const session = { date: `20${yy}-${mo}-${dd}`, start: `${sh}:${sm}`, end: `${eh}:${em}` };
+			// Regex proves only digit shape; reject any token that isn't a real,
+			// in-order datetime so a corrupt link fails cleanly.
+			if (parseSession(session) === null) return null;
+			sessions.push(session);
 		}
 	}
 	let title;
@@ -53,6 +57,9 @@ export function decodeGroup(payload) {
 
 /** @typedef {SessionInput & { startDT: Date, endDT: Date, hours: number }} Session */
 
+/** @param {Session} a @param {Session} b */
+const byStart = (a, b) => a.startDT.getTime() - b.startDT.getTime();
+
 /**
  * Build a Session from raw input. Datetimes are naive local wall-clock.
  * @param {SessionInput} input
@@ -64,7 +71,23 @@ export function parseSession(input) {
 	if (Number.isNaN(startDT.getTime()) || Number.isNaN(endDT.getTime()) || endDT <= startDT) {
 		return null;
 	}
-	const hours = (endDT.getTime() - startDT.getTime()) / 3_600_000;
+	// new Date rolls a bad day over (2026-02-30 -> Mar 2) and the hash encodes only
+	// a 2-digit year — reject both so no session round-trips to the wrong day.
+	const [year, month, day] = input.date.split('-').map(Number);
+	if (
+		year < 2000 ||
+		year > 2099 ||
+		startDT.getFullYear() !== year ||
+		startDT.getMonth() + 1 !== month ||
+		startDT.getDate() !== day
+	) {
+		return null;
+	}
+	// Wall-clock minutes, not the epoch delta: a session spanning a DST change
+	// must report the hours on the clock, not the shorter/longer real time elapsed.
+	const [startH, startMin] = input.start.split(':').map(Number);
+	const [endH, endMin] = input.end.split(':').map(Number);
+	const hours = (endH * 60 + endMin - (startH * 60 + startMin)) / 60;
 	return { ...input, startDT, endDT, hours };
 }
 
@@ -77,7 +100,7 @@ export function parseSessions(inputs) {
 	return inputs
 		.map(parseSession)
 		.filter((session) => session !== null)
-		.sort((a, b) => a.startDT.getTime() - b.startDT.getTime());
+		.sort(byStart);
 }
 
 /**
@@ -103,9 +126,7 @@ export function computeProgress(sessions, targetHours, now) {
  * @returns {{ session: Session, inProgress: boolean } | null}
  */
 export function findNextSession(sessions, now) {
-	const upcoming = sessions
-		.filter((session) => session.endDT > now)
-		.sort((a, b) => a.startDT.getTime() - b.startDT.getTime());
+	const upcoming = sessions.filter((session) => session.endDT > now).sort(byStart);
 	const session = upcoming[0];
 	if (session === undefined) return null;
 	return { session, inProgress: session.startDT <= now };
@@ -135,16 +156,12 @@ export function weekStartOf(date) {
  */
 export function weeklyBuckets(sessions, now) {
 	if (sessions.length === 0) return [];
-	const sorted = [...sessions].sort((a, b) => a.startDT.getTime() - b.startDT.getTime());
+	const sorted = [...sessions].sort(byStart);
 	const firstWeek = weekStartOf(sorted[0].startDT);
 	const lastWeek = weekStartOf(sorted[sorted.length - 1].startDT);
 	/** @type {WeekBucket[]} */
 	const buckets = [];
-	for (
-		const cursor = new Date(firstWeek);
-		cursor <= lastWeek;
-		cursor.setDate(cursor.getDate() + 7)
-	) {
+	for (let cursor = new Date(firstWeek); cursor <= lastWeek; cursor.setDate(cursor.getDate() + 7)) {
 		const weekStart = new Date(cursor);
 		const weekEnd = new Date(weekStart);
 		weekEnd.setDate(weekEnd.getDate() + 7);
@@ -214,7 +231,11 @@ export function formatWeekRange(weekStart, locale) {
  * @param {string} locale
  */
 export function formatHoursNum(hours, locale) {
+	// Normalise the NBSP/narrow-NBSP group separator ICU emits (engines disagree),
+	// matching formatWeekRange.
 	return new Intl.NumberFormat(DATE_LOCALES[locale] ?? locale, {
 		maximumFractionDigits: 1,
-	}).format(hours);
+	})
+		.format(hours)
+		.replace(/\s/g, ' ');
 }

@@ -41,6 +41,13 @@ test('decode returns null on malformed payloads', () => {
 	assert.equal(decodeGroup('2~10~~%E0%A4%A'), null); // broken percent-encoding
 });
 
+test('decode rejects tokens that are digit-shaped but not real datetimes', () => {
+	assert.equal(decodeGroup('2~10~261399.1900.2230~t'), null); // month 13, day 99
+	assert.equal(decodeGroup('2~10~260230.1000.1100~t'), null); // Feb 30 would roll to Mar 2
+	assert.equal(decodeGroup('2~10~260101.2500.2600~t'), null); // hour 25
+	assert.equal(decodeGroup('2~10~260101.1100.1000~t'), null); // end before start
+});
+
 import { parseSession, parseSessions, computeProgress } from '../src/lib.js';
 
 test('parseSession computes local datetimes and duration', () => {
@@ -56,6 +63,34 @@ test('parseSession rejects end <= start and garbage', () => {
 	assert.equal(parseSession({ date: '2026-06-18', start: '19:00', end: '18:00' }), null);
 	assert.equal(parseSession({ date: 'nonsense', start: '19:00', end: '20:00' }), null);
 	assert.equal(parseSession({ date: '', start: '', end: '' }), null);
+});
+
+test('parseSession rejects calendar dates that would silently roll over', () => {
+	assert.equal(parseSession({ date: '2026-02-30', start: '10:00', end: '11:00' }), null); // Feb 30
+	assert.equal(parseSession({ date: '2026-02-29', start: '10:00', end: '11:00' }), null); // 2026 is not a leap year
+	assert.equal(parseSession({ date: '2026-04-31', start: '10:00', end: '11:00' }), null); // April has 30 days
+});
+
+test('parseSession accepts a genuine leap day', () => {
+	const s = parseSession({ date: '2028-02-29', start: '10:00', end: '11:00' });
+	assert.ok(s);
+	assert.equal(s.date, '2028-02-29');
+});
+
+test('parseSession rejects dates outside the encodable 2000-2099 century', () => {
+	assert.equal(parseSession({ date: '1999-12-31', start: '10:00', end: '11:00' }), null);
+	assert.equal(parseSession({ date: '2100-01-01', start: '10:00', end: '11:00' }), null);
+	assert.ok(parseSession({ date: '2000-01-01', start: '10:00', end: '11:00' })); // boundary
+	assert.ok(parseSession({ date: '2099-12-31', start: '10:00', end: '11:00' })); // boundary
+});
+
+test('parseSession measures wall-clock hours, unaffected by a DST transition', () => {
+	// 2026-03-29 is EU spring-forward (02:00 -> 03:00): 01:30-03:30 is 2 hours on
+	// the clock even though only 1 real UTC hour elapses. (Run under a DST-observing
+	// TZ, e.g. TZ=Europe/Berlin, to exercise the transition.)
+	const s = parseSession({ date: '2026-03-29', start: '01:30', end: '03:30' });
+	assert.ok(s);
+	assert.equal(s.hours, 2);
 });
 
 test('parseSessions drops invalid entries and sorts chronologically', () => {
@@ -193,4 +228,10 @@ test('hours localise decimal separators', () => {
 	assert.equal(formatHoursNum(28.5, 'en'), '28.5');
 	assert.equal(formatHoursNum(28.5, 'ru'), '28,5');
 	assert.equal(formatHoursNum(4, 'en'), '4');
+});
+
+test('formatted hours use a plain space, not NBSP, as the ru group separator', () => {
+	const out = formatHoursNum(1200, 'ru');
+	assert.equal(out, '1 200');
+	assert.doesNotMatch(out, /[\u00a0\u202f]/); // no NBSP / narrow NBSP the engines disagree on
 });
