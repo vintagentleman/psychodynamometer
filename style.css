@@ -484,6 +484,26 @@ button {
 		margin-top: 8px;
 	}
 
+	& .zone-field {
+		margin-bottom: 10px;
+	}
+
+	& #zone-select {
+		width: 100%;
+		font: inherit;
+		padding: 8px 10px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--surface);
+		color: var(--ink);
+	}
+
+	& .zone-help {
+		margin: 4px 0 0;
+		font-size: 11px;
+		color: var(--muted);
+	}
+
 	& .remove {
 		flex: none;
 		background: var(--surface);

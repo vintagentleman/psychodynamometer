@@ -33,6 +33,7 @@ const BASE = `http://127.0.0.1:${address.port}`;
 const data = {
 	title: 'Tuesday Group',
 	targetHours: 41.5,
+	timeZone: 'UTC',
 	sessions: [
 		{ date: '2026-06-02', start: '19:00', end: '22:30' },
 		{ date: '2026-06-09', start: '20:00', end: '23:00' },
@@ -329,6 +330,7 @@ check(
 const futureOnly = encodeGroup({
 	title: 'F',
 	targetHours: 10,
+	timeZone: 'UTC',
 	sessions: [
 		{ date: '2026-08-05', start: '10:00', end: '13:00' },
 		{ date: '2026-09-25', start: '10:00', end: '13:00' },
@@ -376,6 +378,7 @@ check(
 const pastOnly = encodeGroup({
 	title: 'P',
 	targetHours: 10,
+	timeZone: 'UTC',
 	sessions: [
 		{ date: '2026-05-05', start: '10:00', end: '13:00' },
 		{ date: '2026-06-25', start: '10:00', end: '13:00' },
@@ -388,6 +391,7 @@ check('all-past: only done segments', (await page.$$('.strip .seg.upcoming')).le
 const twoAug = encodeGroup({
 	title: 'A',
 	targetHours: 10,
+	timeZone: 'UTC',
 	sessions: [
 		{ date: '2026-08-09', start: '12:00', end: '13:00' },
 		{ date: '2026-08-23', start: '12:00', end: '18:00' },
@@ -416,6 +420,7 @@ check(
 const mixedWeek = encodeGroup({
 	title: 'M',
 	targetHours: 10,
+	timeZone: 'UTC',
 	sessions: [
 		{ date: '2026-07-20', start: '10:00', end: '11:00' },
 		{ date: '2026-07-23', start: '12:00', end: '15:00' },
@@ -470,6 +475,7 @@ check('mobile: sections stacked', stacked === true);
 const hostile = encodeGroup({
 	title: '<img src=x onerror=window.__xss=1>',
 	targetHours: 5,
+	timeZone: 'UTC',
 	sessions: [{ date: '2026-01-05', start: '10:00', end: '11:00' }],
 });
 await page.goto(`${BASE}/#d=${hostile}`);

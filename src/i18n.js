@@ -33,6 +33,8 @@ export const messages = {
 		start: 'Start',
 		end: 'End',
 		remove: 'Remove',
+		timeZone: 'Time zone',
+		timesInZone: 'Times are in the group’s zone.',
 	},
 	ru: {
 		appTitle: 'Психодинамометр',
@@ -65,6 +67,8 @@ export const messages = {
 		start: 'Начало',
 		end: 'Конец',
 		remove: 'Удалить',
+		timeZone: 'Time zone',
+		timesInZone: 'Times are in the group’s zone.',
 	},
 };
 

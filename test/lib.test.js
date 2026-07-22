@@ -6,6 +6,7 @@ import { encodeGroup, decodeGroup } from '../src/lib.js';
 const group = {
 	title: 'Группа «Вторник» ~_.%',
 	targetHours: 41.5,
+	timeZone: 'Europe/Moscow',
 	sessions: [
 		{ date: '2026-06-02', start: '19:00', end: '22:30' },
 		{ date: '2026-08-09', start: '08:00', end: '16:00' },
@@ -16,27 +17,37 @@ test('codec round-trips unicode titles and multiple sessions', () => {
 	assert.deepEqual(decodeGroup(encodeGroup(group)), group);
 });
 
+test('codec preserves the group timezone', () => {
+	const decoded = decodeGroup(encodeGroup({ ...group, timeZone: 'America/New_York' }));
+	assert.ok(decoded);
+	assert.equal(decoded.timeZone, 'America/New_York');
+});
+
 test('payload is a bare base64url token, no structure leaked', () => {
 	const payload = encodeGroup(group);
 	assert.match(payload, /^[A-Za-z0-9_-]+$/); // base64url, no padding, no '~'
-	assert.ok(payload.length < 90, `expected compact, got ${payload.length}`);
+	assert.ok(payload.length < 120, `expected compact, got ${payload.length}`);
 });
 
-test('encode stamps the format marker and packs target as half-hours', () => {
+test('encode stamps the format marker, target, count and zone length', () => {
 	const bytes = Buffer.from(encodeGroup(group), 'base64url');
-	assert.equal(bytes[0], 1); // format marker
+	assert.equal(bytes[0], 2); // format marker
 	assert.equal((bytes[1] << 8) | bytes[2], 83); // 41.5 h * 2
 	assert.equal(bytes[3], 2); // session count
+	assert.equal(bytes[4], Buffer.byteLength('Europe/Moscow', 'utf-8')); // zone length (13)
 });
 
 test('decode reads a hand-packed blob', () => {
 	const dateWord = ((2026 - 2000) << 9) | (1 << 5) | 5; // 2026-01-05
 	const timeWord = ((10 * 60) << 13) | ((13 * 60) << 2); // 10:00-13:00
+	const zone = Buffer.from('UTC', 'utf-8');
 	const blob = Buffer.from([
-		1,
+		2, // marker
 		0,
 		40, // target 20 h
 		1, // one session
+		zone.length, // zone length
+		...zone,
 		(dateWord >> 8) & 0xff,
 		dateWord & 0xff,
 		(timeWord >> 16) & 0xff,
@@ -47,6 +58,7 @@ test('decode reads a hand-packed blob', () => {
 	assert.deepEqual(decodeGroup(blob.toString('base64url')), {
 		title: 'Hi',
 		targetHours: 20,
+		timeZone: 'UTC',
 		sessions: [{ date: '2026-01-05', start: '10:00', end: '13:00' }],
 	});
 });
@@ -56,6 +68,7 @@ test('round-trips field boundaries', () => {
 	const edge = {
 		title: '🎯',
 		targetHours: 1000,
+		timeZone: 'UTC',
 		sessions: [
 			{ date: '2000-01-01', start: '00:00', end: '23:59' },
 			{ date: '2099-12-31', start: '00:00', end: '00:01' },
@@ -80,10 +93,20 @@ test('target is quantized to the half hour', () => {
 test('decode returns null on malformed payloads', () => {
 	assert.equal(decodeGroup(''), null); // empty
 	assert.equal(decodeGroup('%%%garbage%%%'), null); // not base64url
-	assert.equal(decodeGroup(Buffer.from([1, 2]).toString('base64url')), null); // < 4 bytes
-	assert.equal(decodeGroup(Buffer.from([2, 0, 40, 0]).toString('base64url')), null); // wrong marker
-	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 1, 0, 0, 0]).toString('base64url')), null); // N=1, < 5 session bytes
-	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 5]).toString('base64url')), null); // N=5, no session bytes
+	assert.equal(decodeGroup(Buffer.from([2, 2]).toString('base64url')), null); // < 5 bytes
+	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 0, 0]).toString('base64url')), null); // v1 marker
+	// zone "UTC", N=1, but only 3 of the 5 session bytes present
+	assert.equal(
+		decodeGroup(Buffer.from([2, 0, 40, 1, 3, 85, 84, 67, 0, 0, 0]).toString('base64url')),
+		null,
+	);
+	// zone "UTC", N=5, no session bytes
+	assert.equal(decodeGroup(Buffer.from([2, 0, 40, 5, 3, 85, 84, 67]).toString('base64url')), null);
+	// zone "XXXX" is not a real IANA zone
+	assert.equal(
+		decodeGroup(Buffer.from([2, 0, 40, 0, 4, 88, 88, 88, 88]).toString('base64url')),
+		null,
+	);
 });
 
 test('decode rejects packed fields that are not real datetimes', () => {
@@ -91,10 +114,14 @@ test('decode rejects packed fields that are not real datetimes', () => {
 	const pack = (dateWord, startMin, endMin) => {
 		const timeWord = (startMin << 13) | (endMin << 2);
 		return Buffer.from([
-			1,
+			2,
 			0,
 			40,
 			1,
+			3, // zone length
+			85,
+			84,
+			67, // "UTC"
 			(dateWord >> 8) & 0xff,
 			dateWord & 0xff,
 			(timeWord >> 16) & 0xff,
@@ -112,8 +139,11 @@ test('decode rejects packed fields that are not real datetimes', () => {
 });
 
 test('decode rejects a title with a broken utf-8 tail', () => {
-	// marker, target, N=0, then a lone 0xC3 (incomplete 2-byte sequence)
-	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 0, 0xc3]).toString('base64url')), null);
+	// marker, target, N=0, zone "UTC", then a lone 0xC3 (incomplete 2-byte sequence)
+	assert.equal(
+		decodeGroup(Buffer.from([2, 0, 40, 0, 3, 85, 84, 67, 0xc3]).toString('base64url')),
+		null,
+	);
 });
 
 import { parseSession, parseSessions, computeProgress } from '../src/lib.js';

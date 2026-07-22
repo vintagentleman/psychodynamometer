@@ -1,7 +1,7 @@
 /** @typedef {{ date: string, start: string, end: string }} SessionInput */
-/** @typedef {{ title: string, targetHours: number, sessions: SessionInput[] }} GroupData */
+/** @typedef {{ title: string, targetHours: number, timeZone: string, sessions: SessionInput[] }} GroupData */
 
-const FORMAT = 1;
+const FORMAT = 2;
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
 
@@ -67,21 +67,25 @@ export function zonedCivilDate(now, zone) {
 
 /**
  * Encode group data as a compact base64url URL-fragment token. The payload is
- * a binary blob — format marker, target in half-hours, session count, one
- * 5-byte record per session (packed date + start/end minute-of-day), then the
- * UTF-8 title — carrying no readable structure by design.
+ * a binary blob — format marker, target in half-hours, session count, zone
+ * length + IANA zone name, one 5-byte record per session (packed date +
+ * start/end minute-of-day), then the UTF-8 title — carrying no readable
+ * structure by design.
  * @param {GroupData} data
  * @returns {string}
  */
 export function encodeGroup(data) {
 	const title = utf8Encoder.encode(data.title);
-	const bytes = new Uint8Array(4 + data.sessions.length * 5 + title.length);
+	const zone = utf8Encoder.encode(data.timeZone);
+	const bytes = new Uint8Array(5 + zone.length + data.sessions.length * 5 + title.length);
 	const halfHours = Math.round(data.targetHours * 2);
 	bytes[0] = FORMAT;
 	bytes[1] = (halfHours >> 8) & 0xff;
 	bytes[2] = halfHours & 0xff;
 	bytes[3] = data.sessions.length;
-	let at = 4;
+	bytes[4] = zone.length;
+	bytes.set(zone, 5);
+	let at = 5 + zone.length;
 	for (const s of data.sessions) {
 		const [year, month, day] = s.date.split('-').map(Number);
 		const [startH, startMin] = s.start.split(':').map(Number);
@@ -99,19 +103,40 @@ export function encodeGroup(data) {
 }
 
 /**
+ * @param {string} zone
+ * @returns {boolean}
+ */
+function isValidZone(zone) {
+	try {
+		new Intl.DateTimeFormat('en', { timeZone: zone });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Decode a base64url token back into group data. Null on any malformation.
  * @param {string} payload
  * @returns {GroupData | null}
  */
 export function decodeGroup(payload) {
 	const bytes = fromBase64url(payload);
-	if (bytes === null || bytes.length < 4 || bytes[0] !== FORMAT) return null;
+	if (bytes === null || bytes.length < 5 || bytes[0] !== FORMAT) return null;
 	const targetHours = ((bytes[1] << 8) | bytes[2]) / 2;
 	const count = bytes[3];
-	if (bytes.length < 4 + count * 5) return null;
+	const zoneLen = bytes[4];
+	if (bytes.length < 5 + zoneLen + count * 5) return null;
+	let timeZone;
+	try {
+		timeZone = utf8Decoder.decode(bytes.subarray(5, 5 + zoneLen));
+	} catch {
+		return null;
+	}
+	if (!isValidZone(timeZone)) return null;
 	/** @type {SessionInput[]} */
 	const sessions = [];
-	let at = 4;
+	let at = 5 + zoneLen;
 	for (let i = 0; i < count; i++) {
 		const dateWord = (bytes[at] << 8) | bytes[at + 1];
 		const timeWord = (bytes[at + 2] << 16) | (bytes[at + 3] << 8) | bytes[at + 4];
@@ -132,7 +157,7 @@ export function decodeGroup(payload) {
 	} catch {
 		return null;
 	}
-	return { title, targetHours, sessions };
+	return { title, targetHours, timeZone, sessions };
 }
 
 /**

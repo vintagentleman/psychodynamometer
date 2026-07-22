@@ -40,6 +40,14 @@ function storeLang(lang) {
 	}
 }
 
+function detectedZone() {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().timeZone;
+	} catch {
+		return 'UTC';
+	}
+}
+
 let locale = resolveLocale(navigator.language, readStoredLang());
 document.documentElement.lang = locale;
 
@@ -164,7 +172,13 @@ function readForm() {
 		const [date, start, end] = [...row.querySelectorAll('input')].map((i) => i.value);
 		return { date, start, end };
 	});
-	return { title: title?.value ?? '', targetHours: Number(target?.value) || 0, sessions };
+	const zone = /** @type {HTMLSelectElement | null} */ (app.querySelector('#zone-select'));
+	return {
+		title: title?.value ?? '',
+		targetHours: Number(target?.value) || 0,
+		timeZone: zone?.value || detectedZone(),
+		sessions,
+	};
 }
 
 /** @param {GroupData} draft */
@@ -360,7 +374,7 @@ function buildSubline(page, targetHours, mode) {
  * replaceChildren, so nothing here re-attaches anything.
  */
 function renderPage() {
-	const data = state.data ?? { title: '', targetHours: 0, sessions: [] };
+	const data = state.data ?? { title: '', targetHours: 0, timeZone: detectedZone(), sessions: [] };
 	const mode = state.mode;
 	const page = /** @type {HTMLElement} */ (cloneTemplate('tpl-page').firstElementChild);
 	page.classList.toggle('editing', mode === 'edit');
@@ -392,7 +406,23 @@ function renderPage() {
 		add.className = 'ghost';
 		add.id = 'add-row';
 		add.textContent = t(locale, 'addSession');
-		schedSlot.append(list, add);
+		const zoneField = document.createElement('div');
+		zoneField.className = 'zone-field';
+		const zoneSelect = document.createElement('select');
+		zoneSelect.id = 'zone-select';
+		zoneSelect.setAttribute('aria-label', t(locale, 'timeZone'));
+		for (const z of Intl.supportedValuesOf('timeZone')) {
+			const opt = document.createElement('option');
+			opt.value = z;
+			opt.textContent = z;
+			if (z === data.timeZone) opt.selected = true;
+			zoneSelect.appendChild(opt);
+		}
+		const zoneHelp = document.createElement('p');
+		zoneHelp.className = 'zone-help';
+		zoneHelp.textContent = t(locale, 'timesInZone');
+		zoneField.append(zoneSelect, zoneHelp);
+		schedSlot.append(zoneField, list, add);
 	}
 
 	const copyBtn = document.createElement('button');
