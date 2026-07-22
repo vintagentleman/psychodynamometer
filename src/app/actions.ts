@@ -1,17 +1,14 @@
-import { app, locale, state } from './store.js';
-import { readRow, readForm, markRow, showBuildError } from './form.js';
-import { refreshComputed } from './render.js';
-import { encodeGroup, shareableGroup, isComplete, isBlankInput } from '../lib.js';
-import { t } from '../i18n.js';
+import { app, locale, state } from './store.ts';
+import { readRow, readForm, markRow, showBuildError } from './form.ts';
+import { refreshComputed } from './render.ts';
+import { encodeGroup, shareableGroup, isComplete, isBlankInput } from '../lib.ts';
+import { t } from '../i18n.ts';
+import type { GroupData } from '../lib/sessions.ts';
 
-/** @typedef {import('../lib/sessions.js').GroupData} GroupData */
-
-/**
- * Write the persisted state into the address bar: a shareable draft becomes a
- * #d= link, anything else clears the hash. Uses replaceState, not
- * `location.hash` — assigning the hash fires hashchange → route(), a redundant
- * re-decode and re-render of the view we build ourselves.
- */
+// Write the persisted state into the address bar: a shareable draft becomes a
+// #d= link, anything else clears the hash. Uses replaceState, not
+// `location.hash` — assigning the hash fires hashchange → route(), a redundant
+// re-decode and re-render of the view we build ourselves.
 export function syncUrl() {
 	const group = shareableGroup(readForm());
 	history.replaceState(
@@ -21,13 +18,9 @@ export function syncUrl() {
 	);
 }
 
-/**
- * Copy the current group's share link to the clipboard.
- * @param {HTMLButtonElement} copyButton
- */
-export function copyLink(copyButton) {
-	/** @type {GroupData} */
-	let cleaned;
+// Copy the current group's share link to the clipboard.
+export function copyLink(copyButton: HTMLButtonElement) {
+	let cleaned: GroupData;
 	if (state.mode === 'view') {
 		if (state.data === null) return;
 		cleaned = state.data;

@@ -1,8 +1,8 @@
 import { test, expect } from 'vitest';
-import { encodeGroup, decodeGroup } from '../src/lib.js';
+import { encodeGroup, decodeGroup } from '../src/lib.ts';
+import type { GroupData } from '../src/lib.ts';
 
-/** @type {import('../src/lib.js').GroupData} */
-const group = {
+const group: GroupData = {
 	title: 'Группа «Вторник» ~_.%',
 	targetHours: 41.5,
 	timeZone: 'Europe/Moscow',
@@ -62,8 +62,7 @@ test('decode reads a hand-packed blob', () => {
 });
 
 test('round-trips field boundaries', () => {
-	/** @type {import('../src/lib.js').GroupData} */
-	const edge = {
+	const edge: GroupData = {
 		title: '🎯',
 		targetHours: 1000,
 		timeZone: 'UTC',
@@ -104,8 +103,7 @@ test('decode returns null on malformed payloads', () => {
 });
 
 test('decode rejects packed fields that are not real datetimes', () => {
-	/** @param {number} dateWord @param {number} startMin @param {number} endMin */
-	const pack = (dateWord, startMin, endMin) => {
+	const pack = (dateWord: number, startMin: number, endMin: number) => {
 		const timeWord = (startMin << 13) | (endMin << 2);
 		return Buffer.from([
 			2,
@@ -139,7 +137,7 @@ test('decode rejects a title with a broken utf-8 tail', () => {
 	).toBeNull();
 });
 
-import { parseSession, parseSessions, computeProgress } from '../src/lib.js';
+import { parseSession, parseSessions, computeProgress } from '../src/lib.ts';
 
 test('parseSession validates and computes wall-clock duration', () => {
 	const s = parseSession({ date: '2026-06-18', start: '19:00', end: '22:30' });
@@ -234,7 +232,7 @@ test('computeProgress with zero target yields zero percent', () => {
 	expect(computeProgress(fixture, 0, Date.UTC(2026, 1, 1)).percent).toBe(0);
 });
 
-import { progressSegments } from '../src/lib.js';
+import { progressSegments } from '../src/lib.ts';
 
 test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
 	expect(computeProgress(fixture, 10, Date.UTC(2026, 0, 10)).upcomingHours).toBe(5);
@@ -255,7 +253,7 @@ test('progressSegments is all zero with no target', () => {
 	expect(progressSegments(5, 5, 0)).toEqual({ donePct: 0, upcomingPct: 0 });
 });
 
-import { findNextSession } from '../src/lib.js';
+import { findNextSession } from '../src/lib.ts';
 
 test('findNextSession picks the earliest not-yet-ended session', () => {
 	const next = findNextSession(fixture, Date.UTC(2026, 0, 6));
@@ -274,7 +272,7 @@ test('findNextSession returns null when everything ended or list is empty', () =
 	expect(findNextSession([], Date.UTC(2026, 0, 1))).toBeNull();
 });
 
-import { weekStartOf, weeklyBuckets } from '../src/lib.js';
+import { weekStartOf, weeklyBuckets } from '../src/lib.ts';
 
 test('weekStartOf snaps to Monday', () => {
 	expect(weekStartOf(new Date(2026, 5, 18))).toEqual(new Date(2026, 5, 15)); // Thu -> Mon
@@ -339,7 +337,7 @@ test('weeklyBuckets keys weeks by the group-zone civil date, not the viewer', ()
 	expect([buckets[0].doneHours, buckets[0].upcomingHours]).toEqual([0, 2]);
 });
 
-import { nowWeekIndex } from '../src/lib.js';
+import { nowWeekIndex } from '../src/lib.ts';
 
 test('nowWeekIndex finds the bucket that contains now, else null', () => {
 	const buckets = weeklyBuckets(
@@ -364,7 +362,7 @@ import {
 	formatMonth,
 	formatWeekRange,
 	formatHoursNum,
-} from '../src/lib.js';
+} from '../src/lib.ts';
 
 test('dates render spelled out, never numeric-ambiguous', () => {
 	const thu = new Date(2026, 5, 18);
@@ -396,7 +394,7 @@ test('formatted hours use a plain space, not NBSP, as the ru group separator', (
 	expect(out).not.toMatch(/[\u00a0\u202f]/); // no NBSP / narrow NBSP the engines disagree on
 });
 
-import { zonedToInstant, zonedCivilDate, formatOffsetTag, formatLocalTime } from '../src/lib.js';
+import { zonedToInstant, zonedCivilDate, formatOffsetTag, formatLocalTime } from '../src/lib.ts';
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
 	// asserted against Date.UTC(...), so these hold under any host TZ
@@ -448,7 +446,7 @@ test('formatLocalTime renders HH:MM', () => {
 	expect(formatLocalTime(Date.UTC(2026, 5, 18, 16, 0), 'en')).toMatch(/^\d{2}:\d{2}$/);
 });
 
-import { viewerMatchesZone } from '../src/lib.js';
+import { viewerMatchesZone } from '../src/lib.ts';
 
 test('viewerMatchesZone compares the viewer offset to the group offset', () => {
 	const ms = Date.UTC(2026, 5, 18, 16, 0);
@@ -457,7 +455,7 @@ test('viewerMatchesZone compares the viewer offset to the group offset', () => {
 	expect(viewerMatchesZone(ms, 'Etc/GMT-14') && viewerMatchesZone(ms, 'Etc/GMT+12')).toBe(false);
 });
 
-import { isBlankInput, isComplete, shareableGroup } from '../src/lib.js';
+import { isBlankInput, isComplete, shareableGroup } from '../src/lib.ts';
 
 const draft = {
 	title: 'G',

@@ -3,10 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { encodeGroup } from '../src/lib.js';
+import { encodeGroup } from '../src/lib.ts';
 
-/** @type {Record<string, string>} */
-const TYPES = {
+const TYPES: Record<string, string> = {
 	'.html': 'text/html',
 	'.css': 'text/css',
 	'.js': 'text/javascript',
@@ -27,7 +26,7 @@ const server = createServer(async (req, res) => {
 	}
 });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(undefined)));
-const address = /** @type {import('node:net').AddressInfo} */ (server.address());
+const address = server.address() as import('node:net').AddressInfo;
 const BASE = `http://127.0.0.1:${address.port}`;
 
 const data = {
@@ -50,14 +49,8 @@ const data = {
 };
 
 const url = `${BASE}/#d=${encodeGroup(data)}`;
-/** @type {string[]} */
-const results = [];
-/**
- * @param {string} name
- * @param {boolean} cond
- * @param {string} [detail]
- */
-const check = (name, cond, detail = '') =>
+const results: string[] = [];
+const check = (name: string, cond: boolean, detail = '') =>
 	results.push(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 
 const browser = await chromium.launch();
@@ -70,8 +63,7 @@ const page = await ctx.newPage();
 // Freeze the page clock: fixtures below are absolute dates authored against
 // this "today", so the suite stays deterministic as real time passes.
 await page.clock.install({ time: new Date(Date.UTC(2026, 6, 21, 12, 0)) });
-/** @type {string[]} */
-const errors = [];
+const errors: string[] = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
@@ -115,9 +107,9 @@ check(
 	JSON.stringify(meterAria),
 );
 const meterGeom = await page.$eval('.meter', (el) => {
-	const done = /** @type {HTMLElement | null} */ (el.querySelector('.meter-done'));
-	const up = /** @type {HTMLElement | null} */ (el.querySelector('.meter-upcoming'));
-	const now = /** @type {HTMLElement | null} */ (el.querySelector('.meter-now'));
+	const done = el.querySelector('.meter-done') as HTMLElement | null;
+	const up = el.querySelector('.meter-upcoming') as HTMLElement | null;
+	const now = el.querySelector('.meter-now') as HTMLElement | null;
 	return {
 		doneSet: done !== null && done.style.width !== '' && done.style.width !== '0%',
 		upSet: up !== null && up.style.width !== '' && up.style.width !== '0%',
@@ -364,7 +356,7 @@ check(
 check(
 	'legend swatch paints exactly what the bars paint',
 	await page.evaluate(() => {
-		const styleOf = (sel) => {
+		const styleOf = (sel: string) => {
 			const el = document.querySelector(sel);
 			if (!el) return null;
 			const s = getComputedStyle(el);
@@ -484,7 +476,7 @@ await page.goto(`${BASE}/#d=${hostile}`);
 await page.waitForTimeout(300);
 check(
 	'XSS: no execution',
-	(await page.evaluate(() => /** @type {{ __xss?: number }} */ (window).__xss)) === undefined,
+	(await page.evaluate(() => (window as { __xss?: number }).__xss)) === undefined,
 );
 check(
 	'XSS: title rendered as text',

@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { messages, resolveLocale, t } from '../src/i18n.js';
+import { messages, resolveLocale, t } from '../src/i18n.ts';
 
 test('stored language wins; otherwise navigator prefix; default en', () => {
 	expect(resolveLocale('ru-RU', 'en')).toBe('en');

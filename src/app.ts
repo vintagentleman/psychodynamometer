@@ -1,29 +1,27 @@
 import '../style.css';
-import { decodeGroup, isBlankInput } from './lib.js';
-import { app, locale, setLocale, state, setState, storeLang } from './app/store.js';
-import { slot, sessionRow } from './app/dom.js';
-import { readForm } from './app/form.js';
-import { renderPage, refreshComputed } from './app/render.js';
-import { copyLink, syncUrl } from './app/actions.js';
+import { decodeGroup, isBlankInput } from './lib.ts';
+import { app, locale, setLocale, state, setState, storeLang } from './app/store.ts';
+import { slot, sessionRow } from './app/dom.ts';
+import { readForm } from './app/form.ts';
+import { renderPage, refreshComputed } from './app/render.ts';
+import { copyLink, syncUrl } from './app/actions.ts';
 
 document.documentElement.lang = locale;
 
-function currentPayload() {
+function currentPayload(): string | null {
 	const match = location.hash.match(/^#d=(.+)$/);
 	return match ? match[1] : null;
 }
 
-/**
- * Wire every handler once, on the stable #app root. Each render replaces #app's
- * children but never #app, so this delegation outlives all of them.
- */
+// Wire every handler once, on the stable #app root. Each render replaces #app's
+// children but never #app, so this delegation outlives all of them.
 function wireApp() {
 	app.addEventListener('click', (event) => {
-		const target = /** @type {HTMLElement} */ (event.target);
+		const target = event.target as HTMLElement;
 
 		const langButton = target.closest('button.lang');
 		if (langButton !== null) {
-			const lang = /** @type {HTMLElement} */ (langButton).dataset.lang;
+			const lang = (langButton as HTMLElement).dataset.lang;
 			if (lang !== 'en' && lang !== 'ru') return;
 			setLocale(lang);
 			storeLang(lang);
@@ -35,7 +33,7 @@ function wireApp() {
 
 		const copyButton = target.closest('#copy-link');
 		if (copyButton !== null) {
-			copyLink(/** @type {HTMLButtonElement} */ (copyButton));
+			copyLink(copyButton as HTMLButtonElement);
 			return;
 		}
 

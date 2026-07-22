@@ -1,7 +1,6 @@
-/** @typedef {'en' | 'ru'} Locale */
+export type Locale = 'en' | 'ru';
 
-/** @type {Record<Locale, Record<string, string>>} */
-export const messages = {
+export const messages: Record<Locale, Record<string, string>> = {
 	en: {
 		appTitle: 'Psychodynamometer',
 		tagline: 'Psychodynamic group progress meter, link-shareable',
@@ -76,25 +75,18 @@ export const messages = {
 	},
 };
 
-/**
- * Stored choice wins; otherwise the browser language; default English.
- * @param {string | null | undefined} navLang
- * @param {string | null} stored
- * @returns {Locale}
- */
-export function resolveLocale(navLang, stored) {
+// Stored choice wins; otherwise the browser language; default English.
+export function resolveLocale(navLang: string | null | undefined, stored: string | null): Locale {
 	if (stored === 'en' || stored === 'ru') return stored;
 	return (navLang ?? '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
 }
 
-/**
- * Translate a key, interpolating {name} params.
- * @param {Locale} locale
- * @param {string} key
- * @param {Record<string, string | number>} [params]
- * @returns {string}
- */
-export function t(locale, key, params = {}) {
+// Translate a key, interpolating {name} params.
+export function t(
+	locale: Locale,
+	key: string,
+	params: Record<string, string | number> = {},
+): string {
 	const template = messages[locale][key] ?? messages.en[key] ?? key;
 	return template.replace(/\{(\w+)\}/g, (match, name) =>
 		name in params ? String(params[name]) : match,

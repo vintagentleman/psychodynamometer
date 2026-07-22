@@ -1,20 +1,27 @@
-import { zonedToInstant } from './tz.js';
+import { zonedToInstant } from './tz.ts';
 
-/** @typedef {{ date: string, start: string, end: string }} SessionInput */
-/** @typedef {{ title: string, targetHours: number, timeZone: string, sessions: SessionInput[] }} GroupData */
-/** @typedef {SessionInput & { hours: number, civilDate: Date, startMs: number, endMs: number }} Session */
-/** @typedef {{ weekStart: Date, doneHours: number, upcomingHours: number }} WeekBucket */
+export type SessionInput = { date: string; start: string; end: string };
+export type GroupData = {
+	title: string;
+	targetHours: number;
+	timeZone: string;
+	sessions: SessionInput[];
+};
+export type Session = SessionInput & {
+	hours: number;
+	civilDate: Date;
+	startMs: number;
+	endMs: number;
+};
+export type WeekBucket = { weekStart: Date; doneHours: number; upcomingHours: number };
 
-/** @param {Session} a @param {Session} b */
-const byStart = (a, b) => a.startMs - b.startMs;
+const byStart = (a: Session, b: Session) => a.startMs - b.startMs;
 
-/**
- * Validate raw input and compute its wall-clock duration. Zone-independent:
- * calendar/time validity does not depend on the group's timezone.
- * @param {SessionInput} input
- * @returns {{ date: string, start: string, end: string, hours: number } | null}
- */
-export function parseSession(input) {
+// Validate raw input and compute its wall-clock duration. Zone-independent:
+// calendar/time validity does not depend on the group's timezone.
+export function parseSession(
+	input: SessionInput,
+): { date: string; start: string; end: string; hours: number } | null {
 	const startDT = new Date(`${input.date}T${input.start}`);
 	const endDT = new Date(`${input.date}T${input.end}`);
 	if (Number.isNaN(startDT.getTime()) || Number.isNaN(endDT.getTime()) || endDT <= startDT) {
@@ -38,16 +45,10 @@ export function parseSession(input) {
 	return { date: input.date, start: input.start, end: input.end, hours };
 }
 
-/**
- * Validate, hydrate into the group zone (instants + civil date), and sort.
- * Invalid inputs are dropped.
- * @param {SessionInput[]} inputs
- * @param {string} zone
- * @returns {Session[]}
- */
-export function parseSessions(inputs, zone) {
-	/** @type {Session[]} */
-	const sessions = [];
+// Validate, hydrate into the group zone (instants + civil date), and sort.
+// Invalid inputs are dropped.
+export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
+	const sessions: Session[] = [];
 	for (const input of inputs) {
 		const valid = parseSession(input);
 		if (valid === null) continue;
@@ -64,13 +65,11 @@ export function parseSessions(inputs, zone) {
 	return sessions.sort(byStart);
 }
 
-/**
- * @param {Session[]} sessions
- * @param {number} targetHours
- * @param {number} nowMs
- * @returns {{ completedHours: number, upcomingHours: number, remainingHours: number, percent: number }}
- */
-export function computeProgress(sessions, targetHours, nowMs) {
+export function computeProgress(
+	sessions: Session[],
+	targetHours: number,
+	nowMs: number,
+): { completedHours: number; upcomingHours: number; remainingHours: number; percent: number } {
 	const completedHours = sessions
 		.filter((session) => session.endMs <= nowMs)
 		.reduce((sum, session) => sum + session.hours, 0);
@@ -82,63 +81,49 @@ export function computeProgress(sessions, targetHours, nowMs) {
 	return { completedHours, upcomingHours, remainingHours, percent };
 }
 
-/**
- * Done and upcoming widths as a % of target, clamped so the two never exceed
- * 100% (overshoot is absorbed).
- * @param {number} completedHours
- * @param {number} upcomingHours
- * @param {number} targetHours
- * @returns {{ donePct: number, upcomingPct: number }}
- */
-export function progressSegments(completedHours, upcomingHours, targetHours) {
+// Done and upcoming widths as a % of target, clamped so the two never exceed
+// 100% (overshoot is absorbed).
+export function progressSegments(
+	completedHours: number,
+	upcomingHours: number,
+	targetHours: number,
+): { donePct: number; upcomingPct: number } {
 	if (targetHours <= 0) return { donePct: 0, upcomingPct: 0 };
 	const donePct = Math.min(100, (completedHours / targetHours) * 100);
 	const upcomingPct = Math.min(100 - donePct, (upcomingHours / targetHours) * 100);
 	return { donePct, upcomingPct };
 }
 
-/**
- * Earliest session that has not ended. A session running right now counts,
- * flagged inProgress.
- * @param {Session[]} sessions
- * @param {number} nowMs
- * @returns {{ session: Session, inProgress: boolean } | null}
- */
-export function findNextSession(sessions, nowMs) {
+// Earliest session that has not ended. A session running right now counts,
+// flagged inProgress.
+export function findNextSession(
+	sessions: Session[],
+	nowMs: number,
+): { session: Session; inProgress: boolean } | null {
 	const upcoming = sessions.filter((session) => session.endMs > nowMs).sort(byStart);
 	const session = upcoming[0];
 	if (session === undefined) return null;
 	return { session, inProgress: session.startMs <= nowMs };
 }
 
-/**
- * Monday 00:00 local of the week containing the given date.
- * @param {Date} date
- * @returns {Date}
- */
-export function weekStartOf(date) {
+// Monday 00:00 local of the week containing the given date.
+export function weekStartOf(date: Date): Date {
 	const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 	monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
 	return monday;
 }
 
-/**
- * One bucket per calendar week from the first session's week through the
- * last's — weeks without sessions stay in, with zero hours (visible gaps).
- * Hours split by session end vs `nowMs`, so a week straddling today carries
- * both a done and an upcoming share. Week membership is keyed to the group-zone
- * civil date, so the bucketing is identical for every viewer.
- * @param {Session[]} sessions
- * @param {number} nowMs
- * @returns {WeekBucket[]}
- */
-export function weeklyBuckets(sessions, nowMs) {
+// One bucket per calendar week from the first session's week through the last's
+// — weeks without sessions stay in, with zero hours (visible gaps). Hours split
+// by session end vs `nowMs`, so a week straddling today carries both a done and
+// an upcoming share. Week membership is keyed to the group-zone civil date, so
+// the bucketing is identical for every viewer.
+export function weeklyBuckets(sessions: Session[], nowMs: number): WeekBucket[] {
 	if (sessions.length === 0) return [];
 	const sorted = [...sessions].sort(byStart);
 	const firstWeek = weekStartOf(sorted[0].civilDate);
 	const lastWeek = weekStartOf(sorted[sorted.length - 1].civilDate);
-	/** @type {WeekBucket[]} */
-	const buckets = [];
+	const buckets: WeekBucket[] = [];
 	for (let cursor = new Date(firstWeek); cursor <= lastWeek; cursor.setDate(cursor.getDate() + 7)) {
 		const weekStart = new Date(cursor);
 		const weekEnd = new Date(weekStart);
@@ -153,15 +138,9 @@ export function weeklyBuckets(sessions, nowMs) {
 	return buckets;
 }
 
-/**
- * Index of the bucket whose [weekStart, weekStart+7) contains the group-zone
- * civil date of now, or null when now is outside the rendered span (all-past or
- * all-future).
- * @param {WeekBucket[]} buckets
- * @param {Date} nowCivil
- * @returns {number | null}
- */
-export function nowWeekIndex(buckets, nowCivil) {
+// Index of the bucket whose [weekStart, weekStart+7) contains the group-zone
+// civil date of now, or null when now is outside the rendered span.
+export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | null {
 	for (let i = 0; i < buckets.length; i++) {
 		const weekEnd = new Date(buckets[i].weekStart);
 		weekEnd.setDate(weekEnd.getDate() + 7);
@@ -170,11 +149,9 @@ export function nowWeekIndex(buckets, nowCivil) {
 	return null;
 }
 
-/** @param {SessionInput} s */
-export const isBlankInput = (s) => s.date === '' && s.start === '' && s.end === '';
+export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';
 
-/** @param {GroupData} draft */
-export function isComplete(draft) {
+export function isComplete(draft: GroupData) {
 	return (
 		draft.title.trim() !== '' &&
 		draft.targetHours > 0 &&
@@ -182,13 +159,9 @@ export function isComplete(draft) {
 	);
 }
 
-/**
- * The draft as a shareable group, or null if any non-blank row is invalid or a
- * required field is missing — i.e. exactly what would produce a valid link.
- * @param {GroupData} draft
- * @returns {GroupData | null}
- */
-export function shareableGroup(draft) {
+// The draft as a shareable group, or null if any non-blank row is invalid or a
+// required field is missing — exactly what would produce a valid link.
+export function shareableGroup(draft: GroupData): GroupData | null {
 	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
 	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
 	return isComplete(cleaned) ? cleaned : null;

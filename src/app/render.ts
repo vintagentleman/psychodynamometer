@@ -1,7 +1,7 @@
-import { app, locale, state } from './store.js';
-import { cloneTemplate, slot, segment, sessionRow } from './dom.js';
-import { readForm, markInvalidRows, clearBuildError } from './form.js';
-import { messages, t } from '../i18n.js';
+import { app, locale, state } from './store.ts';
+import { cloneTemplate, slot, segment, sessionRow } from './dom.ts';
+import { readForm, markInvalidRows, clearBuildError } from './form.ts';
+import { messages, t } from '../i18n.ts';
 import {
 	parseSessions,
 	computeProgress,
@@ -19,31 +19,22 @@ import {
 	formatHoursNum,
 	formatOffsetTag,
 	formatLocalTime,
-} from '../lib.js';
-
-/** @typedef {import('../lib/sessions.js').GroupData} GroupData */
-/** @typedef {import('../lib/sessions.js').Session} Session */
-/** @typedef {import('../lib/sessions.js').WeekBucket} WeekBucket */
+} from '../lib.ts';
+import type { GroupData, Session, WeekBucket } from '../lib/sessions.ts';
 
 function topbarFragment() {
 	const fragment = cloneTemplate('tpl-topbar');
 	for (const button of fragment.querySelectorAll('button.lang')) {
-		const lang = /** @type {HTMLElement} */ (button).dataset.lang;
+		const lang = (button as HTMLElement).dataset.lang;
 		button.classList.toggle('active', locale === lang);
 		button.setAttribute('aria-pressed', String(locale === lang));
 	}
 	return fragment;
 }
 
-/**
- * Recompute the derived regions from `data`. Never touches inputs, so it is
- * safe to call on every keystroke — the caret survives.
- * @param {Element} page
- * @param {GroupData} data
- * @param {Date} now
- * @param {'view' | 'edit'} mode
- */
-function fillDerived(page, data, now, mode) {
+// Recompute the derived regions from `data`. Never touches inputs, so it is
+// safe to call on every keystroke — the caret survives.
+function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | 'edit') {
 	const zone = data.timeZone;
 	const nowMs = now.getTime();
 	const nowCivil = zonedCivilDate(now, zone);
@@ -99,20 +90,15 @@ function fillDerived(page, data, now, mode) {
 	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs, zone);
 }
 
-/**
- * @param {Element} page
- * @param {WeekBucket[]} buckets
- * @param {Date} nowCivil
- */
-function fillRhythm(page, buckets, nowCivil) {
+function fillRhythm(page: Element, buckets: WeekBucket[], nowCivil: Date) {
 	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
 	const strip = slot(page, '.strip');
 	strip.replaceChildren();
 	const nowIndex = nowWeekIndex(buckets, nowCivil);
 	for (const [index, bucket] of buckets.entries()) {
 		const total = bucket.doneHours + bucket.upcomingHours;
-		const slotEl = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
-		const bar = /** @type {HTMLElement} */ (slotEl.querySelector('.bar'));
+		const slotEl = cloneTemplate('tpl-bar').firstElementChild as HTMLElement;
+		const bar = slotEl.querySelector('.bar') as HTMLElement;
 		bar.style.height =
 			total === 0 ? '0' : `${Math.max(8, Math.round((total / maxWeekHours) * 100))}%`;
 		if (bucket.upcomingHours > 0)
@@ -127,8 +113,7 @@ function fillRhythm(page, buckets, nowCivil) {
 
 	const axis = slot(page, '.axis');
 	axis.replaceChildren();
-	/** @type {{ month: string, weeks: number }[]} */
-	const months = [];
+	const months: { month: string; weeks: number }[] = [];
 	for (const bucket of buckets) {
 		const month = formatMonth(bucket.weekStart, locale);
 		const current = months[months.length - 1];
@@ -136,27 +121,26 @@ function fillRhythm(page, buckets, nowCivil) {
 		else months.push({ month, weeks: 1 });
 	}
 	for (const group of months) {
-		const cell = /** @type {HTMLElement} */ (cloneTemplate('tpl-axis-cell').firstElementChild);
+		const cell = cloneTemplate('tpl-axis-cell').firstElementChild as HTMLElement;
 		cell.textContent = group.month;
 		cell.style.flexGrow = String(group.weeks);
 		axis.appendChild(cell);
 	}
 }
 
-/**
- * @param {Element} page
- * @param {Session[]} sessions
- * @param {{ session: Session, inProgress: boolean } | null} next
- * @param {number} nowMs
- * @param {string} zone
- */
-function fillScheduleView(page, sessions, next, nowMs, zone) {
+function fillScheduleView(
+	page: Element,
+	sessions: Session[],
+	next: { session: Session; inProgress: boolean } | null,
+	nowMs: number,
+	zone: string,
+) {
 	const list = slot(page, '.schedule-slot');
 	const ol = document.createElement('ol');
 	ol.className = 'sessions';
 	for (const session of sessions) {
 		const row = cloneTemplate('tpl-session');
-		const item = /** @type {HTMLElement} */ (row.firstElementChild);
+		const item = row.firstElementChild as HTMLElement;
 		item.classList.toggle('past', session.endMs <= nowMs);
 		item.classList.toggle('next', next !== null && session === next.session);
 		slot(row, '.date').textContent = formatDateShort(session.civilDate, locale);
@@ -172,15 +156,10 @@ function fillScheduleView(page, sessions, next, nowMs, zone) {
 	list.replaceChildren(ol);
 }
 
-/**
- * Build the masthead sub-line — target as text (view) or inline input (edit).
- * The completed figure sits in its own .subline-completed span so the live
- * refresh never rebuilds the target input, keeping its caret.
- * @param {Element} page
- * @param {number} targetHours
- * @param {'view' | 'edit'} mode
- */
-function buildSubline(page, targetHours, mode) {
+// Build the masthead sub-line — target as text (view) or inline input (edit).
+// The completed figure sits in its own .subline-completed span so the live
+// refresh never rebuilds the target input, keeping its caret.
+function buildSubline(page: Element, targetHours: number, mode: 'view' | 'edit') {
 	const subline = slot(page, '.subline');
 	const template = messages[locale].headerHours ?? messages.en.headerHours ?? '';
 	subline.replaceChildren();
@@ -210,15 +189,18 @@ function buildSubline(page, targetHours, mode) {
 	subline.appendChild(zoneSpan);
 }
 
-/**
- * Rebuild #app from state: one skeleton, editable regions rendered for the
- * current mode. Handlers live on #app (wired once in wireApp) and survive every
- * replaceChildren, so nothing here re-attaches anything.
- */
+// Rebuild #app from state: one skeleton, editable regions rendered for the
+// current mode. Handlers live on #app (wired once in wireApp) and survive every
+// replaceChildren, so nothing here re-attaches anything.
 export function renderPage() {
-	const data = state.data ?? { title: '', targetHours: 0, timeZone: detectedZone(), sessions: [] };
+	const data: GroupData = state.data ?? {
+		title: '',
+		targetHours: 0,
+		timeZone: detectedZone(),
+		sessions: [],
+	};
 	const mode = state.mode;
-	const page = /** @type {HTMLElement} */ (cloneTemplate('tpl-page').firstElementChild);
+	const page = cloneTemplate('tpl-page').firstElementChild as HTMLElement;
 	page.classList.toggle('editing', mode === 'edit');
 
 	const titleSlot = slot(page, '.title-slot');
@@ -291,10 +273,8 @@ export function renderPage() {
 	if (mode === 'edit') markInvalidRows();
 }
 
-/**
- * Refresh the live glance (progress/next/rhythm) and row validity from the
- * current form values, without rebuilding the inputs — so the caret survives.
- */
+// Refresh the live glance (progress/next/rhythm) and row validity from the
+// current form values, without rebuilding the inputs — so the caret survives.
 export function refreshComputed() {
 	clearBuildError();
 	fillDerived(slot(app, '.page'), readForm(), new Date(), 'edit');
