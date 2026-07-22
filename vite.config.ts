@@ -8,6 +8,6 @@ export default defineConfig({
 		transformer: 'lightningcss',
 		lightningcss: { targets: browserslistToTargets(browserslist()) },
 	},
-	build: { cssMinify: 'lightningcss' },
+	build: { target: 'baseline-widely-available', cssMinify: 'lightningcss' },
 	test: { environment: 'node' },
 });
