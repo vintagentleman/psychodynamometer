@@ -1,3 +1,4 @@
+import '../style.css';
 import { decodeGroup, isBlankInput } from './lib.js';
 import { app, locale, setLocale, state, setState, storeLang } from './app/store.js';
 import { slot, sessionRow } from './app/dom.js';

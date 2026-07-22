@@ -13,7 +13,7 @@ const TYPES = {
 	'.svg': 'image/svg+xml',
 	'.png': 'image/png',
 };
-const root = fileURLToPath(new URL('..', import.meta.url));
+const root = fileURLToPath(new URL('../dist/', import.meta.url));
 const server = createServer(async (req, res) => {
 	try {
 		const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0]));

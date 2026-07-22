@@ -1,6 +1,6 @@
 {
 	"extends": ["markuplint:recommended"],
-	"excludeFiles": ["./.superpowers/**/*"],
+	"excludeFiles": ["./.superpowers/**/*", "./dist/**/*"],
 	"overrides": {
 		"./index.html": {
 			"rules": {
