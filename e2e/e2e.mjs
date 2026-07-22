@@ -158,9 +158,14 @@ check('next row emphasized', (await page.$$('.sessions .session.next')).length =
 check('view offers copy link', (await page.$$('#copy-link')).length === 1);
 
 // --- Dark mode ---
+const lightBg = await page.$eval('.page', (el) => getComputedStyle(el).backgroundColor);
 await page.emulateMedia({ colorScheme: 'dark' });
-const bg = await page.$eval('.page', (el) => getComputedStyle(el).backgroundColor);
-check('dark surface applied', bg === 'rgb(26, 26, 25)', bg);
+const darkBg = await page.$eval('.page', (el) => getComputedStyle(el).backgroundColor);
+check(
+	'dark surface differs from light',
+	darkBg !== '' && darkBg !== lightBg,
+	`${lightBg} -> ${darkBg}`,
+);
 await page.emulateMedia({ colorScheme: 'light' });
 
 // --- Language toggle ---

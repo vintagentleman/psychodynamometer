@@ -1,37 +1,37 @@
 :root {
 	color-scheme: light dark;
 
-	--page: #f9f9f7;
-	--surface: #fcfcfb;
-	--ink: #0b0b0b;
-	--ink-2: #52514e;
-	--muted: #757370;
-	--hairline: #e1e0d9;
-	--border: rgb(11 11 11 / 10%);
-	--viz-done: #2a78d6;
-	--meter-track: #e6e5e0;
-	--accent-ink: #9a3d12;
-	--accent-wash: #fbeee6;
-	--accent-mark: #eb6834;
-	--invalid: #d03b3b;
+	--page: oklch(98.2% 0.0026 106.4deg);
+	--surface: oklch(99.1% 0 0deg);
+	--ink: oklch(15% 0 0deg);
+	--ink-2: oklch(43.5% 0.005 91.5deg);
+	--muted: oklch(55.6% 0.0052 78.3deg);
+	--hairline: oklch(90.6% 0.0095 100deg);
+	--border: oklch(15% 0 0deg / 10%);
+	--viz-done: oklch(57.5% 0.1626 255.5deg);
+	--meter-track: oklch(92.1% 0.0068 97.4deg);
+	--accent-ink: oklch(48.2% 0.135 41.7deg);
+	--accent-wash: oklch(95.7% 0.0177 54deg);
+	--accent-mark: oklch(67.1% 0.175 40.6deg);
+	--invalid: oklch(57.5% 0.1862 25.2deg);
 	--radius: 12px;
 	--radius-bar: 4px;
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--page: #0d0d0d;
-		--surface: #1a1a19;
-		--ink: #fff;
-		--ink-2: #c3c2b7;
-		--muted: #898781;
-		--hairline: #2c2c2a;
-		--border: rgb(255 255 255 / 10%);
-		--viz-done: #3987e5;
-		--meter-track: #33322f;
-		--accent-ink: #f0956d;
-		--accent-wash: #33201a;
-		--accent-mark: #d95926;
+		--page: oklch(15.9% 0 0deg);
+		--surface: oklch(21.7% 0 0deg);
+		--ink: oklch(100% 0 0deg);
+		--ink-2: oklch(81.2% 0.0152 102.5deg);
+		--muted: oklch(62.3% 0.0092 91.5deg);
+		--hairline: oklch(29.2% 0.0036 106.6deg);
+		--border: oklch(100% 0 0deg / 10%);
+		--viz-done: oklch(62.2% 0.1612 255.1deg);
+		--meter-track: oklch(31.7% 0.0054 91.6deg);
+		--accent-ink: oklch(75.5% 0.1228 44.2deg);
+		--accent-wash: oklch(26.6% 0.0318 38.3deg);
+		--accent-mark: oklch(62.2% 0.1726 40.1deg);
 	}
 }
 
