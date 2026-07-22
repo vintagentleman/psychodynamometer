@@ -146,6 +146,11 @@ check(
 check('axis has one cell per month group', (await page.$$('.axis .axis-cell')).length === 3);
 const slotTitle = (await page.getAttribute('.strip .slot', 'title')) ?? '';
 check('bar tooltip names the week range', slotTitle === '1 – 7 Jun · 3.5 h', slotTitle);
+check('rhythm marks exactly one current week', (await page.$$('.strip .slot.now')).length === 1);
+check(
+	'rhythm shows the per-week caption',
+	((await page.textContent('.rhythm-caption')) ?? '').trim() !== '',
+);
 const rows = await page.$$('.sessions .session');
 check('schedule rows = 11', rows.length === 11, `got ${rows.length}`);
 check('past rows marked', (await page.$$('.sessions .session.past')).length === 7);

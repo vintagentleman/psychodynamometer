@@ -244,6 +244,22 @@ export function weeklyBuckets(sessions, now) {
 	return buckets;
 }
 
+/**
+ * Index of the week bucket whose [weekStart, weekStart+7) contains `now`, or
+ * null when `now` falls outside the rendered span (all-past or all-future).
+ * @param {WeekBucket[]} buckets
+ * @param {Date} now
+ * @returns {number | null}
+ */
+export function nowWeekIndex(buckets, now) {
+	for (let i = 0; i < buckets.length; i++) {
+		const weekEnd = new Date(buckets[i].weekStart);
+		weekEnd.setDate(weekEnd.getDate() + 7);
+		if (now >= buckets[i].weekStart && now < weekEnd) return i;
+	}
+	return null;
+}
+
 /** @type {Record<string, string>} */
 const DATE_LOCALES = { en: 'en-GB', ru: 'ru' };
 

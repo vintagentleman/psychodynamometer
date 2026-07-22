@@ -7,6 +7,7 @@ import {
 	progressSegments,
 	findNextSession,
 	weeklyBuckets,
+	nowWeekIndex,
 	formatDateShort,
 	formatDateLong,
 	formatMonth,
@@ -218,7 +219,7 @@ function fillDerived(page, data, now, mode) {
 			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
-	fillRhythm(page, buckets);
+	fillRhythm(page, buckets, now);
 
 	if (mode === 'view') fillScheduleView(page, sessions, next, now);
 }
@@ -226,12 +227,14 @@ function fillDerived(page, data, now, mode) {
 /**
  * @param {Element} page
  * @param {WeekBucket[]} buckets
+ * @param {Date} now
  */
-function fillRhythm(page, buckets) {
+function fillRhythm(page, buckets, now) {
 	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
 	const strip = slot(page, '.strip');
 	strip.replaceChildren();
-	for (const bucket of buckets) {
+	const nowIndex = nowWeekIndex(buckets, now);
+	for (const [index, bucket] of buckets.entries()) {
 		const total = bucket.doneHours + bucket.upcomingHours;
 		const slotEl = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
 		const bar = /** @type {HTMLElement} */ (slotEl.querySelector('.bar'));
@@ -243,6 +246,7 @@ function fillRhythm(page, buckets) {
 		slotEl.title = `${formatWeekRange(bucket.weekStart, locale)} · ${t(locale, 'hoursShort', {
 			hours: formatHoursNum(total, locale),
 		})}`;
+		if (index === nowIndex) slotEl.classList.add('now');
 		strip.appendChild(slotEl);
 	}
 

@@ -287,6 +287,22 @@ test('weeklyBuckets of nothing is empty', () => {
 	assert.deepEqual(weeklyBuckets([], new Date()), []);
 });
 
+import { nowWeekIndex } from '../src/lib.js';
+
+test('nowWeekIndex finds the bucket that contains now, else null', () => {
+	const buckets = weeklyBuckets(
+		parseSessions([
+			{ date: '2026-06-02', start: '19:00', end: '22:00' },
+			{ date: '2026-06-18', start: '19:00', end: '23:00' },
+		]),
+		new Date(2026, 5, 10, 12, 0),
+	); // weeks of Jun 1, Jun 8, Jun 15
+	assert.equal(nowWeekIndex(buckets, new Date(2026, 5, 10)), 1);
+	assert.equal(nowWeekIndex(buckets, new Date(2026, 4, 1)), null);
+	assert.equal(nowWeekIndex(buckets, new Date(2026, 7, 1)), null);
+	assert.equal(nowWeekIndex([], new Date(2026, 5, 10)), null);
+});
+
 import {
 	formatDateShort,
 	formatDateLong,

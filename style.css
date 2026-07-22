@@ -230,13 +230,33 @@ button {
 	display: flex;
 	gap: 3px;
 	height: 64px;
+	margin-bottom: 8px;
+	border-bottom: 2px solid var(--hairline);
 }
 
 .slot {
+	position: relative;
 	flex: 1 1 0;
 	display: flex;
 	align-items: flex-end;
 	justify-content: center;
+}
+
+.slot.now::after {
+	content: '';
+	position: absolute;
+	bottom: -7px;
+	left: 50%;
+	transform: translateX(-50%);
+	border-left: 4px solid transparent;
+	border-right: 4px solid transparent;
+	border-bottom: 5px solid var(--accent-mark);
+}
+
+.rhythm-caption {
+	margin: 8px 0 0;
+	font-size: 11px;
+	color: var(--muted);
 }
 
 .bar {
