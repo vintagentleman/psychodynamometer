@@ -1,4 +1,5 @@
-import { test, expect } from 'vitest';
+import { expect, test } from 'vitest';
+
 import { messages, resolveLocale, t } from '../src/i18n.ts';
 
 test('stored language wins; otherwise navigator prefix; default en', () => {

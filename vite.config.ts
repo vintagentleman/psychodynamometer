@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config';
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	base: './',

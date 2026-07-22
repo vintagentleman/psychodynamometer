@@ -1,10 +1,11 @@
 import '../style.css';
-import { decodeGroup, isBlankInput } from './lib.ts';
-import { app, locale, setLocale, state, setState, storeLang } from './app/store.ts';
-import { slot, sessionRow } from './app/dom.ts';
-import { readForm } from './app/form.ts';
-import { renderPage, refreshComputed } from './app/render.ts';
+
 import { copyLink, syncUrl } from './app/actions.ts';
+import { sessionRow, slot } from './app/dom.ts';
+import { readForm } from './app/form.ts';
+import { refreshComputed, renderPage } from './app/render.ts';
+import { app, locale, setLocale, setState, state, storeLang } from './app/store.ts';
+import { decodeGroup, isBlankInput } from './lib.ts';
 
 document.documentElement.lang = locale;
 

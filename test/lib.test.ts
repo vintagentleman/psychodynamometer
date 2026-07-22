@@ -1,6 +1,7 @@
-import { test, expect } from 'vitest';
-import { encodeGroup, decodeGroup } from '../src/lib.ts';
+import { expect, test } from 'vitest';
+
 import type { GroupData } from '../src/lib.ts';
+import { decodeGroup, encodeGroup } from '../src/lib.ts';
 
 const group: GroupData = {
 	title: 'Группа «Вторник» ~_.%',
@@ -137,7 +138,7 @@ test('decode rejects a title with a broken utf-8 tail', () => {
 	).toBeNull();
 });
 
-import { parseSession, parseSessions, computeProgress } from '../src/lib.ts';
+import { computeProgress, parseSession, parseSessions } from '../src/lib.ts';
 
 test('parseSession validates and computes wall-clock duration', () => {
 	const s = parseSession({ date: '2026-06-18', start: '19:00', end: '22:30' });
@@ -272,7 +273,7 @@ test('findNextSession returns null when everything ended or list is empty', () =
 	expect(findNextSession([], Date.UTC(2026, 0, 1))).toBeNull();
 });
 
-import { weekStartOf, weeklyBuckets } from '../src/lib.ts';
+import { weeklyBuckets, weekStartOf } from '../src/lib.ts';
 
 test('weekStartOf snaps to Monday', () => {
 	expect(weekStartOf(new Date(2026, 5, 18))).toEqual(new Date(2026, 5, 15)); // Thu -> Mon
@@ -357,11 +358,11 @@ test('nowWeekIndex finds the bucket that contains now, else null', () => {
 });
 
 import {
-	formatDateShort,
 	formatDateLong,
+	formatDateShort,
+	formatHoursNum,
 	formatMonth,
 	formatWeekRange,
-	formatHoursNum,
 } from '../src/lib.ts';
 
 test('dates render spelled out, never numeric-ambiguous', () => {
@@ -394,7 +395,7 @@ test('formatted hours use a plain space, not NBSP, as the ru group separator', (
 	expect(out).not.toMatch(/[\u00a0\u202f]/); // no NBSP / narrow NBSP the engines disagree on
 });
 
-import { zonedToInstant, zonedCivilDate, formatOffsetTag, formatLocalTime } from '../src/lib.ts';
+import { formatLocalTime, formatOffsetTag, zonedCivilDate, zonedToInstant } from '../src/lib.ts';
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
 	// asserted against Date.UTC(...), so these hold under any host TZ

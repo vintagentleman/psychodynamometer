@@ -1,6 +1,6 @@
-import { locale } from './store.ts';
 import { t } from '../i18n.ts';
 import type { SessionInput } from '../lib/sessions.ts';
+import { locale } from './store.ts';
 
 // Clone a template and resolve its data-i18n / data-i18n-aria bindings.
 export function cloneTemplate(id: string): DocumentFragment {

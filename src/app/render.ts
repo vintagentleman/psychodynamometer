@@ -1,26 +1,26 @@
-import { app, locale, state } from './store.ts';
-import { cloneTemplate, slot, segment, sessionRow } from './dom.ts';
-import { readForm, markInvalidRows, clearBuildError } from './form.ts';
 import { messages, t } from '../i18n.ts';
 import {
-	parseSessions,
 	computeProgress,
-	progressSegments,
-	findNextSession,
-	weeklyBuckets,
-	nowWeekIndex,
-	zonedCivilDate,
-	viewerMatchesZone,
 	detectedZone,
-	formatDateShort,
+	findNextSession,
 	formatDateLong,
-	formatMonth,
-	formatWeekRange,
+	formatDateShort,
 	formatHoursNum,
-	formatOffsetTag,
 	formatLocalTime,
+	formatMonth,
+	formatOffsetTag,
+	formatWeekRange,
+	nowWeekIndex,
+	parseSessions,
+	progressSegments,
+	viewerMatchesZone,
+	weeklyBuckets,
+	zonedCivilDate,
 } from '../lib.ts';
 import type { GroupData, Session, WeekBucket } from '../lib/sessions.ts';
+import { cloneTemplate, segment, sessionRow, slot } from './dom.ts';
+import { clearBuildError, markInvalidRows, readForm } from './form.ts';
+import { app, locale, state } from './store.ts';
 
 function topbarFragment() {
 	const fragment = cloneTemplate('tpl-topbar');

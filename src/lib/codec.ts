@@ -1,5 +1,5 @@
-import { parseSession } from './sessions.ts';
 import type { GroupData, SessionInput } from './sessions.ts';
+import { parseSession } from './sessions.ts';
 
 const FORMAT = 2;
 const utf8Encoder = new TextEncoder();

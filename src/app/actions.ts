@@ -1,9 +1,9 @@
-import { app, locale, state } from './store.ts';
-import { readRow, readForm, markRow, showBuildError } from './form.ts';
-import { refreshComputed } from './render.ts';
-import { encodeGroup, shareableGroup, isComplete, isBlankInput } from '../lib.ts';
 import { t } from '../i18n.ts';
+import { encodeGroup, isBlankInput, isComplete, shareableGroup } from '../lib.ts';
 import type { GroupData } from '../lib/sessions.ts';
+import { markRow, readForm, readRow, showBuildError } from './form.ts';
+import { refreshComputed } from './render.ts';
+import { app, locale, state } from './store.ts';
 
 // Write the persisted state into the address bar: a shareable draft becomes a
 // #d= link, anything else clears the hash. Uses replaceState, not

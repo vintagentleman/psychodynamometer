@@ -1,8 +1,8 @@
-import { app, locale } from './store.ts';
-import { slot } from './dom.ts';
-import { parseSession, isBlankInput, detectedZone } from '../lib.ts';
 import { t } from '../i18n.ts';
+import { detectedZone, isBlankInput, parseSession } from '../lib.ts';
 import type { GroupData } from '../lib/sessions.ts';
+import { slot } from './dom.ts';
+import { app, locale } from './store.ts';
 
 export function readRow(row: Element) {
 	const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);

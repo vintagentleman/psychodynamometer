@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -19,6 +20,13 @@ export default [
 	{
 		files: ['e2e/**/*.ts'],
 		languageOptions: { globals: { ...globals.node, ...globals.browser } },
+	},
+	{
+		plugins: { 'simple-import-sort': simpleImportSort },
+		rules: {
+			'simple-import-sort/imports': 'error',
+			'simple-import-sort/exports': 'error',
+		},
 	},
 	{ ignores: ['.superpowers/', 'dist/'] },
 ];

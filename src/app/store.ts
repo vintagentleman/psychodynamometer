@@ -1,5 +1,5 @@
-import { resolveLocale } from '../i18n.ts';
 import type { Locale } from '../i18n.ts';
+import { resolveLocale } from '../i18n.ts';
 import type { GroupData } from '../lib/sessions.ts';
 
 export const app = document.querySelector('#app') as HTMLElement;

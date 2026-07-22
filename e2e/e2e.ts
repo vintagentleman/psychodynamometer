@@ -1,8 +1,10 @@
-import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { chromium } from 'playwright';
+
 import { encodeGroup } from '../src/lib.ts';
 
 const TYPES: Record<string, string> = {
