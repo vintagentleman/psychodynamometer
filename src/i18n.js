@@ -4,6 +4,7 @@
 export const messages = {
 	en: {
 		appTitle: 'Psychodynamometer',
+		tagline: 'Psychodynamic group progress meter, link-shareable',
 		progress: 'Progress',
 		nextSession: 'Next session',
 		inProgress: 'in progress',
@@ -35,6 +36,7 @@ export const messages = {
 	},
 	ru: {
 		appTitle: 'Психодинамометр',
+		tagline: 'Счётчик прогресса психодинамической группы, которым можно делиться по ссылке',
 		progress: 'Прогресс',
 		nextSession: 'Следующая сессия',
 		inProgress: 'идёт сейчас',

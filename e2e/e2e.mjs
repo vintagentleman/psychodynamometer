@@ -87,6 +87,10 @@ check(
 		'vintagentleman/psychodynamometer',
 	),
 );
+check(
+	'app tagline present',
+	((await page.textContent('.app-tagline')) ?? '').includes('link-shareable'),
+);
 const masthead = (await page.textContent('.subline')) ?? '';
 check('masthead hours line', /of 41.5 contracted hours/.test(masthead), masthead.trim());
 const hero = (await page.textContent('.hero')) ?? '';

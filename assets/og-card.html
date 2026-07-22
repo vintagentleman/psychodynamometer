@@ -29,44 +29,72 @@
 				color: #52514e;
 			}
 			.meter {
+				position: relative;
+				display: flex;
 				height: 28px;
 				border-radius: 8px;
-				background: #cde2fb;
+				background: #e6e5e0;
 				overflow: hidden;
 			}
-			.fill {
-				width: 69%;
-				height: 100%;
+			.meter .done {
+				width: 55%;
 				background: #2a78d6;
-				border-radius: 0 8px 8px 0;
+			}
+			.meter .up {
+				width: 22%;
+				background: repeating-linear-gradient(45deg, #2a78d6 0 6px, transparent 6px 12px);
+			}
+			.meter .now {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: 55%;
+				width: 4px;
+				background: #eb6834;
 			}
 			.strip {
 				display: flex;
 				align-items: flex-end;
 				gap: 10px;
 				height: 120px;
+				border-bottom: 3px solid #e1e0d9;
 			}
 			.bar {
+				position: relative;
 				width: 48px;
 				border-radius: 8px 8px 0 0;
 				background: #2a78d6;
 			}
-			.up {
-				background: #86b6ef;
+			.bar.up {
+				background: repeating-linear-gradient(45deg, #2a78d6 0 6px, transparent 6px 12px);
+			}
+			.bar.now::after {
+				content: '';
+				position: absolute;
+				bottom: -16px;
+				left: 50%;
+				transform: translateX(-50%);
+				border-left: 7px solid transparent;
+				border-right: 7px solid transparent;
+				border-bottom: 9px solid #eb6834;
 			}
 		</style>
 	</head>
 	<body>
 		<h1>Psychodynamometer</h1>
-		<p>Sessions, hours and rhythm of a time-bounded group — shared as a link.</p>
-		<div class="meter"><div class="fill"></div></div>
+		<p>Psychodynamic group progress meter, link-shareable</p>
+		<div class="meter">
+			<div class="done"></div>
+			<div class="up"></div>
+			<div class="now"></div>
+		</div>
 		<div class="strip">
 			<div class="bar" style="height: 55%"></div>
 			<div class="bar" style="height: 45%"></div>
 			<div class="bar" style="height: 70%"></div>
 			<div class="bar" style="height: 0"></div>
 			<div class="bar" style="height: 60%"></div>
-			<div class="bar up" style="height: 45%"></div>
+			<div class="bar up now" style="height: 45%"></div>
 			<div class="bar up" style="height: 60%"></div>
 			<div class="bar up" style="height: 100%"></div>
 		</div>
