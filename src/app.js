@@ -4,6 +4,7 @@ import {
 	parseSession,
 	parseSessions,
 	computeProgress,
+	progressSegments,
 	findNextSession,
 	weeklyBuckets,
 	formatDateShort,
@@ -186,7 +187,7 @@ let state = { mode: 'edit', data: null, badLink: false };
  */
 function fillDerived(page, data, now, mode) {
 	const sessions = parseSessions(data.sessions);
-	const { completedHours, remainingHours, percent } = computeProgress(
+	const { completedHours, upcomingHours, remainingHours, percent } = computeProgress(
 		sessions,
 		data.targetHours,
 		now,
@@ -207,7 +208,10 @@ function fillDerived(page, data, now, mode) {
 	meter.setAttribute('aria-valuemin', '0');
 	meter.setAttribute('aria-valuemax', '100');
 	meter.setAttribute('aria-valuenow', String(rounded));
-	slot(page, '.meter-fill').style.width = `${percent}%`;
+	const segments = progressSegments(completedHours, upcomingHours, data.targetHours);
+	slot(page, '.meter-done').style.width = `${segments.donePct}%`;
+	slot(page, '.meter-upcoming').style.width = `${segments.upcomingPct}%`;
+	slot(page, '.meter-now').style.left = `${segments.donePct}%`;
 
 	slot(page, '.next-when').textContent = next
 		? `${formatDateLong(next.session.startDT, locale)} · ${next.session.start}–${next.session.end}` +

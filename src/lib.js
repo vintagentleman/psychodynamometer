@@ -157,15 +157,34 @@ export function parseSessions(inputs) {
  * @param {Session[]} sessions
  * @param {number} targetHours
  * @param {Date} now
- * @returns {{ completedHours: number, remainingHours: number, percent: number }}
+ * @returns {{ completedHours: number, upcomingHours: number, remainingHours: number, percent: number }}
  */
 export function computeProgress(sessions, targetHours, now) {
 	const completedHours = sessions
 		.filter((session) => session.endDT <= now)
 		.reduce((sum, session) => sum + session.hours, 0);
+	const upcomingHours = sessions
+		.filter((session) => session.endDT > now)
+		.reduce((sum, session) => sum + session.hours, 0);
 	const remainingHours = Math.max(0, targetHours - completedHours);
 	const percent = targetHours > 0 ? Math.min(100, (completedHours / targetHours) * 100) : 0;
-	return { completedHours, remainingHours, percent };
+	return { completedHours, upcomingHours, remainingHours, percent };
+}
+
+/**
+ * Meter segment widths as percentages of the target: solid done, striped
+ * already-scheduled upcoming, and (implicitly) the grey unplanned remainder.
+ * Clamped so done + upcoming never exceed 100%. The now-tick sits at donePct.
+ * @param {number} completedHours
+ * @param {number} upcomingHours
+ * @param {number} targetHours
+ * @returns {{ donePct: number, upcomingPct: number }}
+ */
+export function progressSegments(completedHours, upcomingHours, targetHours) {
+	if (targetHours <= 0) return { donePct: 0, upcomingPct: 0 };
+	const donePct = Math.min(100, (completedHours / targetHours) * 100);
+	const upcomingPct = Math.min(100 - donePct, (upcomingHours / targetHours) * 100);
+	return { donePct, upcomingPct };
 }
 
 /**

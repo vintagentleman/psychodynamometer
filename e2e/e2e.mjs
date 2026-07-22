@@ -97,6 +97,23 @@ check(
 		!!meterAria.label,
 	JSON.stringify(meterAria),
 );
+const meterGeom = await page.$eval('.meter', (el) => {
+	const done = /** @type {HTMLElement | null} */ (el.querySelector('.meter-done'));
+	const up = /** @type {HTMLElement | null} */ (el.querySelector('.meter-upcoming'));
+	const now = /** @type {HTMLElement | null} */ (el.querySelector('.meter-now'));
+	return {
+		doneSet: done !== null && done.style.width !== '' && done.style.width !== '0%',
+		upSet: up !== null && up.style.width !== '' && up.style.width !== '0%',
+		striped:
+			up !== null && getComputedStyle(up).backgroundImage.includes('repeating-linear-gradient'),
+		nowSet: now !== null && now.style.left !== '',
+	};
+});
+check(
+	'meter shows done + striped upcoming + now tick',
+	meterGeom.doneSet && meterGeom.upSet && meterGeom.striped && meterGeom.nowSet,
+	JSON.stringify(meterGeom),
+);
 const nextWhen = (await page.textContent('.next-when')) ?? '';
 check('next session spelled long date', /23 July/.test(nextWhen), nextWhen.trim());
 check('no numeric DD.MM anywhere', !/\d{2}\.\d{2}/.test((await page.textContent('.page')) ?? ''));

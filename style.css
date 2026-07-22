@@ -9,7 +9,7 @@
 	--hairline: #e1e0d9;
 	--border: rgb(11 11 11 / 10%);
 	--viz-done: #2a78d6;
-	--meter-track: #cde2fb;
+	--meter-track: #e6e5e0;
 	--accent-ink: #9a3d12;
 	--accent-wash: #fbeee6;
 	--accent-mark: #eb6834;
@@ -28,7 +28,7 @@
 		--hairline: #2c2c2a;
 		--border: rgb(255 255 255 / 10%);
 		--viz-done: #3987e5;
-		--meter-track: #0d366b;
+		--meter-track: #33322f;
 		--accent-ink: #f0956d;
 		--accent-wash: #33201a;
 		--accent-mark: #d95926;
@@ -190,15 +190,27 @@ button {
 }
 
 .meter {
+	position: relative;
+	display: flex;
 	height: 12px;
 	border-radius: var(--radius-bar);
 	background: var(--meter-track);
+	overflow: hidden;
 
-	& .meter-fill {
-		height: 100%;
-		max-width: 100%;
-		border-radius: 0 var(--radius-bar) var(--radius-bar) 0;
+	& .meter-done {
 		background: var(--viz-done);
+	}
+
+	& .meter-upcoming {
+		background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
+	}
+
+	& .meter-now {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 2px;
+		background: var(--accent-mark);
 	}
 }
 

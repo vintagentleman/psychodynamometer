@@ -196,6 +196,27 @@ test('computeProgress with zero target yields zero percent', () => {
 	assert.equal(computeProgress(fixture, 0, new Date(2026, 1, 1)).percent, 0);
 });
 
+import { progressSegments } from '../src/lib.js';
+
+test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
+	assert.equal(computeProgress(fixture, 10, new Date(2026, 0, 10)).upcomingHours, 5);
+	assert.equal(computeProgress(fixture, 10, new Date(2026, 1, 1)).upcomingHours, 0);
+});
+
+test('progressSegments splits done / upcoming / unplanned against the target', () => {
+	assert.deepEqual(progressSegments(7, 0, 10), { donePct: 70, upcomingPct: 0 });
+	assert.deepEqual(progressSegments(4, 3, 10), { donePct: 40, upcomingPct: 30 });
+});
+
+test('progressSegments clamps overshoot so the bar never exceeds 100%', () => {
+	assert.deepEqual(progressSegments(12, 0, 10), { donePct: 100, upcomingPct: 0 });
+	assert.deepEqual(progressSegments(7, 6, 10), { donePct: 70, upcomingPct: 30 });
+});
+
+test('progressSegments is all zero with no target', () => {
+	assert.deepEqual(progressSegments(5, 5, 0), { donePct: 0, upcomingPct: 0 });
+});
+
 import { findNextSession } from '../src/lib.js';
 
 test('findNextSession picks the earliest not-yet-ended session', () => {
