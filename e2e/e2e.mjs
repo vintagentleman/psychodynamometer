@@ -202,8 +202,10 @@ check(
 	((await page.textContent('.hero-value')) ?? '') !== '0%',
 );
 check('live rhythm renders a bar', (await page.$$('.strip .bar')).length >= 1);
+check('a complete edit syncs the share link into the url', /#d=[A-Za-z0-9_-]+$/.test(page.url()));
 
 await page.fill('input[name="end"]', '09:00');
+check('an invalid edit clears the url hash', !/#d=/.test(page.url()));
 check('invalid row flagged', (await page.$$('#rows .row.invalid')).length === 1);
 check(
 	'invalid row marks its inputs aria-invalid',

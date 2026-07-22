@@ -174,6 +174,33 @@ function isComplete(draft) {
 	);
 }
 
+/**
+ * The draft as a shareable group, or null if any non-blank row is invalid or a
+ * required field is missing — i.e. exactly what would produce a valid link.
+ * @param {GroupData} draft
+ * @returns {GroupData | null}
+ */
+function shareableGroup(draft) {
+	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
+	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
+	return isComplete(cleaned) ? cleaned : null;
+}
+
+/**
+ * Mirror the current edit into the address bar via replaceState — no reload, no
+ * hashchange (so no re-render / lost caret), no history entry. A shareable draft
+ * becomes a #d= link; anything incomplete or invalid clears the hash so the URL
+ * never lies.
+ */
+function syncUrl() {
+	const group = shareableGroup(readForm());
+	history.replaceState(
+		null,
+		'',
+		group ? `${location.pathname}#d=${encodeGroup(group)}` : location.pathname,
+	);
+}
+
 /** @type {{ mode: 'view' | 'edit', data: GroupData | null, badLink: boolean }} */
 let state = { mode: 'edit', data: null, badLink: false };
 
@@ -402,6 +429,7 @@ function refreshComputed() {
 	clearBuildError();
 	fillDerived(slot(app, '.page'), readForm(), new Date(), 'edit');
 	markInvalidRows();
+	syncUrl();
 }
 
 /**
