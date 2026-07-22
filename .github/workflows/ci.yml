@@ -44,8 +44,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # A re-run keeps the earlier attempt's github-pages artifact, and
-      # deploy-pages errors on two; drop any stale one so this run has just one.
       - name: Remove stale pages artifact
         env:
           GH_TOKEN: ${{ github.token }}

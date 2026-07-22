@@ -223,10 +223,10 @@ check(
 	((await page.textContent('.hero-value')) ?? '') !== '0%',
 );
 check('live rhythm renders a bar', (await page.$$('.strip .bar')).length >= 1);
-check('a complete edit syncs the share link into the url', /#d=[A-Za-z0-9_-]+$/.test(page.url()));
+check('a complete edit leaves the url untouched before Done', !/#d=/.test(page.url()));
 
 await page.fill('input[name="end"]', '09:00');
-check('an invalid edit clears the url hash', !/#d=/.test(page.url()));
+check('an invalid edit still leaves the url untouched', !/#d=/.test(page.url()));
 check('invalid row flagged', (await page.$$('#rows .row.invalid')).length === 1);
 check(
 	'invalid row marks its inputs aria-invalid',
@@ -283,6 +283,7 @@ check('editing clears the status message', !(await page.isVisible('.note-copyerr
 
 await page.click('#done');
 check('done exits edit mode', (await page.$$('.page.editing')).length === 0);
+check('done persists the share link into the url', /#d=[A-Za-z0-9_-]+$/.test(page.url()));
 check('done shows the built group', (await page.textContent('.masthead h2')) === 'Test Group');
 await page.click('#copy-link');
 const fromView = await page.evaluate(() => navigator.clipboard.readText());
@@ -294,6 +295,24 @@ check(
 
 await page.goto(copied);
 check('copied link round-trips', (await page.textContent('.masthead h2')) === 'Test Group');
+
+// --- Editing a loaded link leaves the url untouched until Done ---
+await page.goto(url);
+const loaded = page.url();
+await page.click('#edit');
+await page.fill('input[name="title"]', 'Renamed Group');
+check('editing a loaded link does not rewrite the url', page.url() === loaded);
+await page.click('#done');
+check(
+	'done rewrites the url to the edited state',
+	page.url() !== loaded && /#d=[A-Za-z0-9_-]+$/.test(page.url()),
+);
+check('done shows the renamed group', (await page.textContent('.masthead h2')) === 'Renamed Group');
+await page.goto(page.url());
+check(
+	'the persisted edit round-trips',
+	(await page.textContent('.masthead h2')) === 'Renamed Group',
+);
 
 // --- Bad hash ---
 await page.goto(`${BASE}/#d=%%%garbage%%%`);

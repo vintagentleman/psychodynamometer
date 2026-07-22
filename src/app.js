@@ -187,9 +187,10 @@ function shareableGroup(draft) {
 }
 
 /**
- * Mirror the current edit into the address bar with replaceState, not
- * `location.hash` — assigning the hash fires hashchange → re-render → lost
- * caret. A shareable draft becomes a #d= link; anything else clears the hash.
+ * Write the persisted state into the address bar: a shareable draft becomes a
+ * #d= link, anything else clears the hash. Uses replaceState, not
+ * `location.hash` — assigning the hash fires hashchange → route(), a redundant
+ * re-decode and re-render of the view we build ourselves.
  */
 function syncUrl() {
 	const group = shareableGroup(readForm());
@@ -426,7 +427,6 @@ function refreshComputed() {
 	clearBuildError();
 	fillDerived(slot(app, '.page'), readForm(), new Date(), 'edit');
 	markInvalidRows();
-	syncUrl();
 }
 
 /**
@@ -505,6 +505,7 @@ function wireApp() {
 		}
 
 		if (target.closest('#done') !== null) {
+			syncUrl();
 			const draft = readForm();
 			state = {
 				mode: 'view',
