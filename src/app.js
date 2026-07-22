@@ -87,8 +87,8 @@ function currentPayload() {
 	return match ? match[1] : null;
 }
 
-function langToggleFragment() {
-	const fragment = cloneTemplate('tpl-lang-toggle');
+function topbarFragment() {
+	const fragment = cloneTemplate('tpl-topbar');
 	for (const button of fragment.querySelectorAll('button.lang')) {
 		const lang = /** @type {HTMLElement} */ (button).dataset.lang;
 		button.classList.toggle('active', locale === lang);
@@ -366,9 +366,9 @@ function renderPage() {
 
 	const titleSlot = slot(page, '.title-slot');
 	if (mode === 'view') {
-		const h1 = document.createElement('h1');
-		h1.textContent = data.title;
-		titleSlot.appendChild(h1);
+		const h2 = document.createElement('h2');
+		h2.textContent = data.title;
+		titleSlot.appendChild(h2);
 	} else {
 		const input = document.createElement('input');
 		input.name = 'title';
@@ -412,7 +412,7 @@ function renderPage() {
 
 	if (mode === 'edit' && state.badLink) slot(page, '.note-badlink').hidden = false;
 
-	app.replaceChildren(langToggleFragment(), page);
+	app.replaceChildren(topbarFragment(), page);
 
 	fillDerived(page, mode === 'edit' ? readForm() : data, new Date(), mode);
 	if (mode === 'edit') markInvalidRows();

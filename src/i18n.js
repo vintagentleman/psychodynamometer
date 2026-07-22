@@ -3,6 +3,7 @@
 /** @type {Record<Locale, Record<string, string>>} */
 export const messages = {
 	en: {
+		appTitle: 'Psychodynamometer',
 		progress: 'Progress',
 		nextSession: 'Next session',
 		inProgress: 'in progress',
@@ -33,6 +34,7 @@ export const messages = {
 		remove: 'Remove',
 	},
 	ru: {
+		appTitle: 'Психодинамометр',
 		progress: 'Прогресс',
 		nextSession: 'Следующая сессия',
 		inProgress: 'идёт сейчас',

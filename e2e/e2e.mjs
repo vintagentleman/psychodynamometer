@@ -75,7 +75,18 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 // --- View mode ---
 await page.goto(url);
-check('masthead title', (await page.textContent('.masthead h1')) === 'Tuesday Group');
+check('masthead title', (await page.textContent('.masthead h2')) === 'Tuesday Group');
+check(
+	'app title is the sole h1',
+	(await page.$$('h1')).length === 1 &&
+		(await page.textContent('h1.app-title')) === 'Psychodynamometer',
+);
+check(
+	'github link targets the repo',
+	((await page.getAttribute('.gh-link', 'href')) ?? '').includes(
+		'vintagentleman/psychodynamometer',
+	),
+);
 const masthead = (await page.textContent('.subline')) ?? '';
 check('masthead hours line', /of 41.5 contracted hours/.test(masthead), masthead.trim());
 const hero = (await page.textContent('.hero')) ?? '';
@@ -187,6 +198,7 @@ check('edit offers a done toggle', (await page.$$('#done')).length === 1);
 // --- Edit (build) mode from scratch ---
 await page.goto(`${BASE}/`);
 check('no hash -> edit mode', (await page.$$('.page.editing')).length === 1);
+check('empty edit state still has an h1', (await page.$$('h1.app-title')).length === 1);
 check(
 	'edit target is an inline input in the subline',
 	(await page.$$('.subline input[name="targetHours"]')).length === 1,
@@ -267,7 +279,7 @@ check('editing clears the status message', !(await page.isVisible('.note-copyerr
 
 await page.click('#done');
 check('done exits edit mode', (await page.$$('.page.editing')).length === 0);
-check('done shows the built group', (await page.textContent('.masthead h1')) === 'Test Group');
+check('done shows the built group', (await page.textContent('.masthead h2')) === 'Test Group');
 await page.click('#copy-link');
 const fromView = await page.evaluate(() => navigator.clipboard.readText());
 check(
@@ -277,7 +289,7 @@ check(
 );
 
 await page.goto(copied);
-check('copied link round-trips', (await page.textContent('.masthead h1')) === 'Test Group');
+check('copied link round-trips', (await page.textContent('.masthead h2')) === 'Test Group');
 
 // --- Bad hash ---
 await page.goto(`${BASE}/#d=%%%garbage%%%`);
@@ -445,7 +457,7 @@ check(
 );
 check(
 	'XSS: title rendered as text',
-	((await page.textContent('.masthead h1')) ?? '').includes('<img'),
+	((await page.textContent('.masthead h2')) ?? '').includes('<img'),
 );
 
 check('zero page/console errors across all flows', errors.length === 0, errors.join(' | '));

@@ -1,4 +1,4 @@
-# psycho-group-progress
+# psychodynamometer
 
 Static group-progress visualiser (GitHub Pages). No bundler, no minifier, no
 runtime dependencies, no frameworks — plain ES modules served as authored.

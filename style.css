@@ -77,11 +77,41 @@ button {
 	}
 }
 
+.topbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 10px;
+}
+
+.app-title {
+	margin: 0;
+	min-width: 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--ink);
+}
+
+.topbar-actions {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 10px;
+}
+
+.gh-link {
+	display: inline-flex;
+	color: var(--muted);
+}
+
+.gh-link:hover {
+	color: var(--ink);
+}
+
 .lang-toggle {
 	display: flex;
-	justify-content: flex-end;
 	gap: 4px;
-	margin-bottom: 10px;
 
 	& .lang {
 		padding: 4px 10px;
@@ -110,7 +140,7 @@ button {
 	padding: 20px;
 	border-bottom: 1px solid var(--hairline);
 
-	& h1 {
+	& h2 {
 		margin: 0;
 		font-size: 20px;
 	}

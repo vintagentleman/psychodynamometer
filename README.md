@@ -1,4 +1,6 @@
-# Group Progress
+# Psychodynamometer
+
+[![Live on GitHub Pages](https://img.shields.io/badge/live-GitHub%20Pages-2a78d6)](https://vintagentleman.github.io/psychodynamometer/)
 
 A static, shareable progress page for time-bounded therapy and coaching
 groups: contracted hours vs hours done, the next session, weekly rhythm and
@@ -16,7 +18,8 @@ cost a participant a session; that format is banned here by construction).
 Open the page, fill in the group name, target hours and sessions, press
 **Copy link**, share the link. Anyone opening it sees current progress —
 past and upcoming are computed against their clock, so the link never goes
-stale. Language auto-detects (EN/RU) and can be toggled.
+stale. They can hit **Edit** to adjust and re-share; the address bar stays in
+sync as you edit. Language auto-detects (EN/RU) and can be toggled.
 
 The data lives entirely in the URL hash: nothing is uploaded anywhere.
 

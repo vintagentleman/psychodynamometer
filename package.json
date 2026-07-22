@@ -1,5 +1,5 @@
 {
-	"name": "psycho-group-progress",
+	"name": "psychodynamometer",
 	"version": "1.0.0",
 	"description": "Static, shareable progress visualiser for time-bounded therapy and coaching groups",
 	"type": "module",
