@@ -63,12 +63,13 @@ const check = (name, cond, detail = '') =>
 const browser = await chromium.launch();
 const ctx = await browser.newContext({
 	viewport: { width: 400, height: 900 },
+	timezoneId: 'UTC',
 	permissions: ['clipboard-read', 'clipboard-write'],
 });
 const page = await ctx.newPage();
 // Freeze the page clock: fixtures below are absolute dates authored against
 // this "today", so the suite stays deterministic as real time passes.
-await page.clock.install({ time: new Date(2026, 6, 21, 12, 0) });
+await page.clock.install({ time: new Date(Date.UTC(2026, 6, 21, 12, 0)) });
 /** @type {string[]} */
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));

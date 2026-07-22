@@ -8,6 +8,7 @@ import {
 	findNextSession,
 	weeklyBuckets,
 	nowWeekIndex,
+	zonedCivilDate,
 	formatDateShort,
 	formatDateLong,
 	formatMonth,
@@ -184,7 +185,9 @@ function readForm() {
 /** @param {GroupData} draft */
 function isComplete(draft) {
 	return (
-		draft.title.trim() !== '' && draft.targetHours > 0 && parseSessions(draft.sessions).length > 0
+		draft.title.trim() !== '' &&
+		draft.targetHours > 0 &&
+		parseSessions(draft.sessions, draft.timeZone).length > 0
 	);
 }
 
@@ -227,14 +230,17 @@ let state = { mode: 'edit', data: null, badLink: false };
  * @param {'view' | 'edit'} mode
  */
 function fillDerived(page, data, now, mode) {
-	const sessions = parseSessions(data.sessions);
+	const zone = data.timeZone;
+	const nowMs = now.getTime();
+	const nowCivil = zonedCivilDate(now, zone);
+	const sessions = parseSessions(data.sessions, zone);
 	const { completedHours, upcomingHours, remainingHours, percent } = computeProgress(
 		sessions,
 		data.targetHours,
-		now,
+		nowMs,
 	);
-	const next = findNextSession(sessions, now);
-	const buckets = weeklyBuckets(sessions, now);
+	const next = findNextSession(sessions, nowMs);
+	const buckets = weeklyBuckets(sessions, nowMs);
 
 	const completedSpan = page.querySelector('.subline-completed');
 	if (completedSpan !== null) completedSpan.textContent = formatHoursNum(completedHours, locale);
@@ -255,25 +261,25 @@ function fillDerived(page, data, now, mode) {
 	slot(page, '.meter-now').style.left = `${segments.donePct}%`;
 
 	slot(page, '.next-when').textContent = next
-		? `${formatDateLong(next.session.startDT, locale)} · ${next.session.start}–${next.session.end}` +
+		? `${formatDateLong(next.session.civilDate, locale)} · ${next.session.start}–${next.session.end}` +
 			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
-	fillRhythm(page, buckets, now);
+	fillRhythm(page, buckets, nowCivil);
 
-	if (mode === 'view') fillScheduleView(page, sessions, next, now);
+	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs);
 }
 
 /**
  * @param {Element} page
  * @param {WeekBucket[]} buckets
- * @param {Date} now
+ * @param {Date} nowCivil
  */
-function fillRhythm(page, buckets, now) {
+function fillRhythm(page, buckets, nowCivil) {
 	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
 	const strip = slot(page, '.strip');
 	strip.replaceChildren();
-	const nowIndex = nowWeekIndex(buckets, now);
+	const nowIndex = nowWeekIndex(buckets, nowCivil);
 	for (const [index, bucket] of buckets.entries()) {
 		const total = bucket.doneHours + bucket.upcomingHours;
 		const slotEl = /** @type {HTMLElement} */ (cloneTemplate('tpl-bar').firstElementChild);
@@ -312,18 +318,18 @@ function fillRhythm(page, buckets, now) {
  * @param {Element} page
  * @param {Session[]} sessions
  * @param {{ session: Session, inProgress: boolean } | null} next
- * @param {Date} now
+ * @param {number} nowMs
  */
-function fillScheduleView(page, sessions, next, now) {
+function fillScheduleView(page, sessions, next, nowMs) {
 	const list = slot(page, '.schedule-slot');
 	const ol = document.createElement('ol');
 	ol.className = 'sessions';
 	for (const session of sessions) {
 		const row = cloneTemplate('tpl-session');
 		const item = /** @type {HTMLElement} */ (row.firstElementChild);
-		item.classList.toggle('past', session.endDT <= now);
+		item.classList.toggle('past', session.endMs <= nowMs);
 		item.classList.toggle('next', next !== null && session === next.session);
-		slot(row, '.date').textContent = formatDateShort(session.startDT, locale);
+		slot(row, '.date').textContent = formatDateShort(session.civilDate, locale);
 		slot(row, '.time').textContent = `${session.start}–${session.end}`;
 		slot(row, '.hours').textContent = t(locale, 'hoursShort', {
 			hours: formatHoursNum(session.hours, locale),

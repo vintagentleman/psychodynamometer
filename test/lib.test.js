@@ -148,12 +148,24 @@ test('decode rejects a title with a broken utf-8 tail', () => {
 
 import { parseSession, parseSessions, computeProgress } from '../src/lib.js';
 
-test('parseSession computes local datetimes and duration', () => {
+test('parseSession validates and computes wall-clock duration', () => {
 	const s = parseSession({ date: '2026-06-18', start: '19:00', end: '22:30' });
 	assert.ok(s);
 	assert.equal(s.hours, 3.5);
-	assert.deepEqual(s.startDT, new Date(2026, 5, 18, 19, 0));
-	assert.deepEqual(s.endDT, new Date(2026, 5, 18, 22, 30));
+	assert.equal(s.date, '2026-06-18');
+	assert.equal(s.start, '19:00');
+	assert.equal(s.end, '22:30');
+	assert.ok(!('startDT' in s));
+});
+
+test('parseSessions hydrates instants and civil date in the group zone', () => {
+	const [s] = parseSessions(
+		[{ date: '2026-06-18', start: '19:00', end: '22:30' }],
+		'Europe/Moscow',
+	);
+	assert.equal(s.startMs, Date.UTC(2026, 5, 18, 16, 0));
+	assert.equal(s.endMs, Date.UTC(2026, 5, 18, 19, 30));
+	assert.deepEqual(s.civilDate, new Date(2026, 5, 18));
 });
 
 test('parseSession rejects end <= start and garbage', () => {
@@ -192,45 +204,51 @@ test('parseSession measures wall-clock hours, unaffected by a DST transition', (
 });
 
 test('parseSessions drops invalid entries and sorts chronologically', () => {
-	const sessions = parseSessions([
-		{ date: '2026-01-20', start: '10:00', end: '15:00' },
-		{ date: 'broken', start: '10:00', end: '11:00' },
-		{ date: '2026-01-05', start: '10:00', end: '13:00' },
-	]);
+	const sessions = parseSessions(
+		[
+			{ date: '2026-01-20', start: '10:00', end: '15:00' },
+			{ date: 'broken', start: '10:00', end: '11:00' },
+			{ date: '2026-01-05', start: '10:00', end: '13:00' },
+		],
+		'UTC',
+	);
 	assert.equal(sessions.length, 2);
 	assert.equal(sessions[0].date, '2026-01-05');
 	assert.equal(sessions[1].date, '2026-01-20');
 });
 
-const fixture = parseSessions([
-	{ date: '2026-01-05', start: '10:00', end: '13:00' }, // 3 h
-	{ date: '2026-01-07', start: '10:00', end: '14:00' }, // 4 h
-	{ date: '2026-01-20', start: '10:00', end: '15:00' }, // 5 h
-]);
+const fixture = parseSessions(
+	[
+		{ date: '2026-01-05', start: '10:00', end: '13:00' }, // 3 h
+		{ date: '2026-01-07', start: '10:00', end: '14:00' }, // 4 h
+		{ date: '2026-01-20', start: '10:00', end: '15:00' }, // 5 h
+	],
+	'UTC',
+);
 
 test('computeProgress counts only ended sessions', () => {
-	const p = computeProgress(fixture, 10, new Date(2026, 0, 10));
+	const p = computeProgress(fixture, 10, Date.UTC(2026, 0, 10));
 	assert.equal(p.completedHours, 7);
 	assert.equal(p.remainingHours, 3);
 	assert.equal(p.percent, 70);
 });
 
 test('computeProgress overshoot: percent caps, real hours shown, remaining clamps', () => {
-	const p = computeProgress(fixture, 10, new Date(2026, 1, 1));
+	const p = computeProgress(fixture, 10, Date.UTC(2026, 1, 1));
 	assert.equal(p.completedHours, 12);
 	assert.equal(p.remainingHours, 0);
 	assert.equal(p.percent, 100);
 });
 
 test('computeProgress with zero target yields zero percent', () => {
-	assert.equal(computeProgress(fixture, 0, new Date(2026, 1, 1)).percent, 0);
+	assert.equal(computeProgress(fixture, 0, Date.UTC(2026, 1, 1)).percent, 0);
 });
 
 import { progressSegments } from '../src/lib.js';
 
 test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
-	assert.equal(computeProgress(fixture, 10, new Date(2026, 0, 10)).upcomingHours, 5);
-	assert.equal(computeProgress(fixture, 10, new Date(2026, 1, 1)).upcomingHours, 0);
+	assert.equal(computeProgress(fixture, 10, Date.UTC(2026, 0, 10)).upcomingHours, 5);
+	assert.equal(computeProgress(fixture, 10, Date.UTC(2026, 1, 1)).upcomingHours, 0);
 });
 
 test('progressSegments splits done / upcoming / unplanned against the target', () => {
@@ -250,22 +268,22 @@ test('progressSegments is all zero with no target', () => {
 import { findNextSession } from '../src/lib.js';
 
 test('findNextSession picks the earliest not-yet-ended session', () => {
-	const next = findNextSession(fixture, new Date(2026, 0, 6));
+	const next = findNextSession(fixture, Date.UTC(2026, 0, 6));
 	assert.ok(next);
 	assert.equal(next.session.date, '2026-01-07');
 	assert.equal(next.inProgress, false);
 });
 
 test('findNextSession flags a session running right now', () => {
-	const next = findNextSession(fixture, new Date(2026, 0, 20, 11, 0));
+	const next = findNextSession(fixture, Date.UTC(2026, 0, 20, 11, 0));
 	assert.ok(next);
 	assert.equal(next.session.date, '2026-01-20');
 	assert.equal(next.inProgress, true);
 });
 
 test('findNextSession returns null when everything ended or list is empty', () => {
-	assert.equal(findNextSession(fixture, new Date(2026, 1, 1)), null);
-	assert.equal(findNextSession([], new Date(2026, 0, 1)), null);
+	assert.equal(findNextSession(fixture, Date.UTC(2026, 1, 1)), null);
+	assert.equal(findNextSession([], Date.UTC(2026, 0, 1)), null);
 });
 
 import { weekStartOf, weeklyBuckets } from '../src/lib.js';
@@ -277,11 +295,14 @@ test('weekStartOf snaps to Monday', () => {
 });
 
 test('weeklyBuckets spans first..last week, keeps empty weeks, splits by now', () => {
-	const sessions = parseSessions([
-		{ date: '2026-06-02', start: '19:00', end: '22:00' }, // Tue, week of Jun 1, 3 h
-		{ date: '2026-06-18', start: '19:00', end: '23:00' }, // Thu, week of Jun 15, 4 h
-	]);
-	const buckets = weeklyBuckets(sessions, new Date(2026, 5, 10, 12, 0)); // Wed, week of Jun 8
+	const sessions = parseSessions(
+		[
+			{ date: '2026-06-02', start: '19:00', end: '22:00' }, // Tue, week of Jun 1, 3 h
+			{ date: '2026-06-18', start: '19:00', end: '23:00' }, // Thu, week of Jun 15, 4 h
+		],
+		'UTC',
+	);
+	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 10, 12, 0)); // Wed, week of Jun 8
 	assert.equal(buckets.length, 3);
 	assert.deepEqual(
 		buckets.map((b) => [b.doneHours, b.upcomingHours]),
@@ -297,35 +318,54 @@ test('weeklyBuckets spans first..last week, keeps empty weeks, splits by now', (
 });
 
 test('weeklyBuckets splits a week that straddles now into both segments', () => {
-	const sessions = parseSessions([
-		{ date: '2026-06-08', start: '10:00', end: '12:00' }, // Mon, 2 h — ended
-		{ date: '2026-06-12', start: '10:00', end: '13:00' }, // Fri, 3 h — upcoming
-	]);
-	const buckets = weeklyBuckets(sessions, new Date(2026, 5, 10, 12, 0)); // Wed same week
+	const sessions = parseSessions(
+		[
+			{ date: '2026-06-08', start: '10:00', end: '12:00' }, // Mon, 2 h — ended
+			{ date: '2026-06-12', start: '10:00', end: '13:00' }, // Fri, 3 h — upcoming
+		],
+		'UTC',
+	);
+	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 10, 12, 0)); // Wed same week
 	assert.equal(buckets.length, 1);
 	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [2, 3]);
 });
 
 test('weeklyBuckets counts a session ending in the future as upcoming even in the current week', () => {
 	// the exact shape of the reported bug: today Tue, session Thu same week
-	const sessions = parseSessions([{ date: '2026-07-23', start: '12:00', end: '15:00' }]);
-	const buckets = weeklyBuckets(sessions, new Date(2026, 6, 21, 12, 0)); // Tue 21 Jul
+	const sessions = parseSessions([{ date: '2026-07-23', start: '12:00', end: '15:00' }], 'UTC');
+	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 6, 21, 12, 0)); // Tue 21 Jul
 	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [0, 3]);
 });
 
 test('weeklyBuckets of nothing is empty', () => {
-	assert.deepEqual(weeklyBuckets([], new Date()), []);
+	assert.deepEqual(weeklyBuckets([], Date.now()), []);
+});
+
+test('weeklyBuckets keys weeks by the group-zone civil date, not the viewer', () => {
+	// Sunday 21:00 Moscow — a late-Sunday session belongs to Sunday's week even
+	// for a viewer who experiences it as Monday morning
+	const sessions = parseSessions(
+		[{ date: '2026-06-14', start: '21:00', end: '23:00' }],
+		'Europe/Moscow',
+	);
+	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 1)); // before it -> upcoming
+	assert.equal(buckets.length, 1);
+	assert.deepEqual(buckets[0].weekStart, new Date(2026, 5, 8)); // Mon of the week of Sun Jun 14
+	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [0, 2]);
 });
 
 import { nowWeekIndex } from '../src/lib.js';
 
 test('nowWeekIndex finds the bucket that contains now, else null', () => {
 	const buckets = weeklyBuckets(
-		parseSessions([
-			{ date: '2026-06-02', start: '19:00', end: '22:00' },
-			{ date: '2026-06-18', start: '19:00', end: '23:00' },
-		]),
-		new Date(2026, 5, 10, 12, 0),
+		parseSessions(
+			[
+				{ date: '2026-06-02', start: '19:00', end: '22:00' },
+				{ date: '2026-06-18', start: '19:00', end: '23:00' },
+			],
+			'UTC',
+		),
+		Date.UTC(2026, 5, 10, 12, 0),
 	); // weeks of Jun 1, Jun 8, Jun 15
 	assert.equal(nowWeekIndex(buckets, new Date(2026, 5, 10)), 1);
 	assert.equal(nowWeekIndex(buckets, new Date(2026, 4, 1)), null);

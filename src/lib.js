@@ -189,15 +189,16 @@ function fromBase64url(token) {
 	return bytes;
 }
 
-/** @typedef {SessionInput & { startDT: Date, endDT: Date, hours: number }} Session */
+/** @typedef {SessionInput & { hours: number, civilDate: Date, startMs: number, endMs: number }} Session */
 
 /** @param {Session} a @param {Session} b */
-const byStart = (a, b) => a.startDT.getTime() - b.startDT.getTime();
+const byStart = (a, b) => a.startMs - b.startMs;
 
 /**
- * Build a Session from raw input. Datetimes are naive local wall-clock.
+ * Validate raw input and compute its wall-clock duration. Zone-independent:
+ * calendar/time validity does not depend on the group's timezone.
  * @param {SessionInput} input
- * @returns {Session | null}
+ * @returns {{ date: string, start: string, end: string, hours: number } | null}
  */
 export function parseSession(input) {
 	const startDT = new Date(`${input.date}T${input.start}`);
@@ -220,33 +221,47 @@ export function parseSession(input) {
 	const [startH, startMin] = input.start.split(':').map(Number);
 	const [endH, endMin] = input.end.split(':').map(Number);
 	const hours = (endH * 60 + endMin - (startH * 60 + startMin)) / 60;
-	return { ...input, startDT, endDT, hours };
+	return { date: input.date, start: input.start, end: input.end, hours };
 }
 
 /**
- * Parse many inputs: invalid ones are dropped, the rest sorted chronologically.
+ * Validate, hydrate into the group zone (instants + civil date), and sort.
+ * Invalid inputs are dropped.
  * @param {SessionInput[]} inputs
+ * @param {string} zone
  * @returns {Session[]}
  */
-export function parseSessions(inputs) {
-	return inputs
-		.map(parseSession)
-		.filter((session) => session !== null)
-		.sort(byStart);
+export function parseSessions(inputs, zone) {
+	/** @type {Session[]} */
+	const sessions = [];
+	for (const input of inputs) {
+		const valid = parseSession(input);
+		if (valid === null) continue;
+		const [year, month, day] = input.date.split('-').map(Number);
+		const [startH, startMin] = input.start.split(':').map(Number);
+		const [endH, endMin] = input.end.split(':').map(Number);
+		sessions.push({
+			...valid,
+			civilDate: new Date(year, month - 1, day),
+			startMs: zonedToInstant({ y: year, mo: month, d: day, h: startH, mi: startMin }, zone),
+			endMs: zonedToInstant({ y: year, mo: month, d: day, h: endH, mi: endMin }, zone),
+		});
+	}
+	return sessions.sort(byStart);
 }
 
 /**
  * @param {Session[]} sessions
  * @param {number} targetHours
- * @param {Date} now
+ * @param {number} nowMs
  * @returns {{ completedHours: number, upcomingHours: number, remainingHours: number, percent: number }}
  */
-export function computeProgress(sessions, targetHours, now) {
+export function computeProgress(sessions, targetHours, nowMs) {
 	const completedHours = sessions
-		.filter((session) => session.endDT <= now)
+		.filter((session) => session.endMs <= nowMs)
 		.reduce((sum, session) => sum + session.hours, 0);
 	const upcomingHours = sessions
-		.filter((session) => session.endDT > now)
+		.filter((session) => session.endMs > nowMs)
 		.reduce((sum, session) => sum + session.hours, 0);
 	const remainingHours = Math.max(0, targetHours - completedHours);
 	const percent = targetHours > 0 ? Math.min(100, (completedHours / targetHours) * 100) : 0;
@@ -272,14 +287,14 @@ export function progressSegments(completedHours, upcomingHours, targetHours) {
  * Earliest session that has not ended. A session running right now counts,
  * flagged inProgress.
  * @param {Session[]} sessions
- * @param {Date} now
+ * @param {number} nowMs
  * @returns {{ session: Session, inProgress: boolean } | null}
  */
-export function findNextSession(sessions, now) {
-	const upcoming = sessions.filter((session) => session.endDT > now).sort(byStart);
+export function findNextSession(sessions, nowMs) {
+	const upcoming = sessions.filter((session) => session.endMs > nowMs).sort(byStart);
 	const session = upcoming[0];
 	if (session === undefined) return null;
-	return { session, inProgress: session.startDT <= now };
+	return { session, inProgress: session.startMs <= nowMs };
 }
 
 /** @typedef {{ weekStart: Date, doneHours: number, upcomingHours: number }} WeekBucket */
@@ -298,45 +313,47 @@ export function weekStartOf(date) {
 /**
  * One bucket per calendar week from the first session's week through the
  * last's — weeks without sessions stay in, with zero hours (visible gaps).
- * Hours split by session end vs `now`, so a week straddling today carries
- * both a done and an upcoming share.
+ * Hours split by session end vs `nowMs`, so a week straddling today carries
+ * both a done and an upcoming share. Week membership is keyed to the group-zone
+ * civil date, so the bucketing is identical for every viewer.
  * @param {Session[]} sessions
- * @param {Date} now
+ * @param {number} nowMs
  * @returns {WeekBucket[]}
  */
-export function weeklyBuckets(sessions, now) {
+export function weeklyBuckets(sessions, nowMs) {
 	if (sessions.length === 0) return [];
 	const sorted = [...sessions].sort(byStart);
-	const firstWeek = weekStartOf(sorted[0].startDT);
-	const lastWeek = weekStartOf(sorted[sorted.length - 1].startDT);
+	const firstWeek = weekStartOf(sorted[0].civilDate);
+	const lastWeek = weekStartOf(sorted[sorted.length - 1].civilDate);
 	/** @type {WeekBucket[]} */
 	const buckets = [];
 	for (let cursor = new Date(firstWeek); cursor <= lastWeek; cursor.setDate(cursor.getDate() + 7)) {
 		const weekStart = new Date(cursor);
 		const weekEnd = new Date(weekStart);
 		weekEnd.setDate(weekEnd.getDate() + 7);
-		const inWeek = sorted.filter((s) => s.startDT >= weekStart && s.startDT < weekEnd);
+		const inWeek = sorted.filter((s) => s.civilDate >= weekStart && s.civilDate < weekEnd);
 		buckets.push({
 			weekStart,
-			doneHours: inWeek.filter((s) => s.endDT <= now).reduce((sum, s) => sum + s.hours, 0),
-			upcomingHours: inWeek.filter((s) => s.endDT > now).reduce((sum, s) => sum + s.hours, 0),
+			doneHours: inWeek.filter((s) => s.endMs <= nowMs).reduce((sum, s) => sum + s.hours, 0),
+			upcomingHours: inWeek.filter((s) => s.endMs > nowMs).reduce((sum, s) => sum + s.hours, 0),
 		});
 	}
 	return buckets;
 }
 
 /**
- * Index of the week bucket whose [weekStart, weekStart+7) contains `now`, or
- * null when `now` falls outside the rendered span (all-past or all-future).
+ * Index of the bucket whose [weekStart, weekStart+7) contains the group-zone
+ * civil date of now, or null when now is outside the rendered span (all-past or
+ * all-future).
  * @param {WeekBucket[]} buckets
- * @param {Date} now
+ * @param {Date} nowCivil
  * @returns {number | null}
  */
-export function nowWeekIndex(buckets, now) {
+export function nowWeekIndex(buckets, nowCivil) {
 	for (let i = 0; i < buckets.length; i++) {
 		const weekEnd = new Date(buckets[i].weekStart);
 		weekEnd.setDate(weekEnd.getDate() + 7);
-		if (now >= buckets[i].weekStart && now < weekEnd) return i;
+		if (nowCivil >= buckets[i].weekStart && nowCivil < weekEnd) return i;
 	}
 	return null;
 }
