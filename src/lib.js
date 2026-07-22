@@ -66,6 +66,18 @@ export function zonedCivilDate(now, zone) {
 }
 
 /**
+ * True when the viewer's local zone has the same offset as `zone` at instant
+ * `ms` — i.e. the group time and the viewer's time coincide, so a separate
+ * "your time" line adds nothing.
+ * @param {number} ms
+ * @param {string} zone
+ * @returns {boolean}
+ */
+export function viewerMatchesZone(ms, zone) {
+	return zoneOffsetMs(ms, zone) === -new Date(ms).getTimezoneOffset() * 60000;
+}
+
+/**
  * Encode group data as a compact base64url URL-fragment token. The payload is
  * a binary blob — format marker, target in half-hours, session count, zone
  * length + IANA zone name, one 5-byte record per session (packed date +

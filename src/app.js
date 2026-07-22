@@ -14,6 +14,9 @@ import {
 	formatMonth,
 	formatWeekRange,
 	formatHoursNum,
+	formatOffsetTag,
+	formatLocalTime,
+	viewerMatchesZone,
 } from './lib.js';
 import { messages, resolveLocale, t } from './i18n.js';
 
@@ -245,6 +248,11 @@ function fillDerived(page, data, now, mode) {
 	const completedSpan = page.querySelector('.subline-completed');
 	if (completedSpan !== null) completedSpan.textContent = formatHoursNum(completedHours, locale);
 
+	const zoneTag = page.querySelector('.subline-zone');
+	if (zoneTag !== null) {
+		zoneTag.textContent = ` · ${formatOffsetTag(nowMs, zone, locale)} · ${t(locale, 'groupTime')}`;
+	}
+
 	const rounded = Math.round(percent);
 	slot(page, '.hero-value').textContent = `${rounded}%`;
 	slot(page, '.hero-side').textContent =
@@ -265,9 +273,19 @@ function fillDerived(page, data, now, mode) {
 			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
+	const local = slot(page, '.next-local');
+	if (next !== null && !viewerMatchesZone(next.session.startMs, zone)) {
+		local.hidden = false;
+		local.textContent =
+			`${formatDateLong(new Date(next.session.startMs), locale)} · ` +
+			`${formatLocalTime(next.session.startMs, locale)} · ${t(locale, 'yourTime')}`;
+	} else {
+		local.hidden = true;
+	}
+
 	fillRhythm(page, buckets, nowCivil);
 
-	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs);
+	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs, zone);
 }
 
 /**
@@ -319,8 +337,9 @@ function fillRhythm(page, buckets, nowCivil) {
  * @param {Session[]} sessions
  * @param {{ session: Session, inProgress: boolean } | null} next
  * @param {number} nowMs
+ * @param {string} zone
  */
-function fillScheduleView(page, sessions, next, nowMs) {
+function fillScheduleView(page, sessions, next, nowMs, zone) {
 	const list = slot(page, '.schedule-slot');
 	const ol = document.createElement('ol');
 	ol.className = 'sessions';
@@ -331,6 +350,9 @@ function fillScheduleView(page, sessions, next, nowMs) {
 		item.classList.toggle('next', next !== null && session === next.session);
 		slot(row, '.date').textContent = formatDateShort(session.civilDate, locale);
 		slot(row, '.time').textContent = `${session.start}–${session.end}`;
+		if (session.endMs > nowMs && !viewerMatchesZone(session.startMs, zone)) {
+			slot(row, '.local-time').textContent = formatLocalTime(session.startMs, locale);
+		}
 		slot(row, '.hours').textContent = t(locale, 'hoursShort', {
 			hours: formatHoursNum(session.hours, locale),
 		});
@@ -372,6 +394,9 @@ function buildSubline(page, targetHours, mode) {
 			subline.appendChild(document.createTextNode(part));
 		}
 	}
+	const zoneSpan = document.createElement('span');
+	zoneSpan.className = 'subline-zone';
+	subline.appendChild(zoneSpan);
 }
 
 /**

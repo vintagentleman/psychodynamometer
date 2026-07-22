@@ -133,6 +133,7 @@ check(
 );
 const nextWhen = (await page.textContent('.next-when')) ?? '';
 check('next session spelled long date', /23 July/.test(nextWhen), nextWhen.trim());
+check('viewer in the group zone sees no local line', await page.isHidden('.next-local'));
 check('no numeric DD.MM anywhere', !/\d{2}\.\d{2}/.test((await page.textContent('.page')) ?? ''));
 const bars = await page.$$('.strip .bar');
 check('rhythm bars = 10 weekly buckets', bars.length === 10, `got ${bars.length}`);
@@ -489,6 +490,34 @@ check(
 	'XSS: title rendered as text',
 	((await page.textContent('.masthead h2')) ?? '').includes('<img'),
 );
+
+// --- Remote viewer: group time constant, viewer-local line localises ---
+const moscow = encodeGroup({
+	title: 'Moscow Group',
+	targetHours: 10,
+	timeZone: 'Europe/Moscow',
+	sessions: [{ date: '2026-07-23', start: '18:00', end: '21:00' }],
+});
+const nyCtx = await browser.newContext({
+	viewport: { width: 400, height: 900 },
+	timezoneId: 'America/New_York',
+});
+const nyPage = await nyCtx.newPage();
+await nyPage.clock.install({ time: new Date(Date.UTC(2026, 6, 21, 12, 0)) });
+await nyPage.goto(`${BASE}/#d=${moscow}`);
+const nyGroup = (await nyPage.textContent('.next-when')) ?? '';
+check(
+	'remote: group time shows Moscow wall-clock',
+	/23 July/.test(nyGroup) && /18:00/.test(nyGroup),
+	nyGroup.trim(),
+);
+const nySub = (await nyPage.textContent('.subline')) ?? '';
+check('remote: subline tags the group offset', /GMT\+3/.test(nySub), nySub.trim());
+check('remote: viewer-local line is shown', await nyPage.isVisible('.next-local'));
+const nyLocal = (await nyPage.textContent('.next-local')) ?? '';
+// 18:00 Moscow (UTC+3) = 15:00 UTC = 11:00 New York (EDT, UTC-4)
+check('remote: viewer-local line shows New York time', /11:00/.test(nyLocal), nyLocal.trim());
+await nyCtx.close();
 
 check('zero page/console errors across all flows', errors.length === 0, errors.join(' | '));
 await browser.close();
