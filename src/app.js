@@ -343,17 +343,21 @@ function renderPage() {
 		schedSlot.append(list, add);
 	}
 
-	const btn = document.createElement('button');
-	btn.type = 'button';
+	const copyBtn = document.createElement('button');
+	copyBtn.type = 'button';
+	copyBtn.id = 'copy-link';
+	copyBtn.textContent = t(locale, 'copyLink');
+	const toggle = document.createElement('button');
+	toggle.type = 'button';
+	toggle.className = 'ghost';
 	if (mode === 'view') {
-		btn.className = 'ghost';
-		btn.id = 'edit';
-		btn.textContent = t(locale, 'edit');
+		toggle.id = 'edit';
+		toggle.textContent = t(locale, 'edit');
 	} else {
-		btn.id = 'copy-link';
-		btn.textContent = t(locale, 'copyLink');
+		toggle.id = 'done';
+		toggle.textContent = t(locale, 'doneEditing');
 	}
-	slot(page, '.page-actions').prepend(btn);
+	slot(page, '.page-actions').prepend(copyBtn, toggle);
 
 	if (mode === 'edit' && state.badLink) slot(page, '.note-badlink').hidden = false;
 
@@ -374,25 +378,33 @@ function refreshComputed() {
 }
 
 /**
- * Validate the edit fields, and on success copy a share link to the clipboard.
+ * Copy the current group's share link to the clipboard. In edit mode the draft
+ * is validated first; in view mode the already-complete data is re-encoded.
  * @param {HTMLButtonElement} copyButton
  */
 function copyLink(copyButton) {
-	refreshComputed();
-	const draft = readForm();
-	let blocked = false;
-	for (const row of app.querySelectorAll('#rows .row')) {
-		const r = readRow(row);
-		const bad = !r.blank && !r.valid;
-		markRow(row, bad);
-		blocked ||= bad;
+	/** @type {GroupData} */
+	let cleaned;
+	if (state.mode === 'view') {
+		if (state.data === null) return;
+		cleaned = state.data;
+	} else {
+		refreshComputed();
+		const draft = readForm();
+		let blocked = false;
+		for (const row of app.querySelectorAll('#rows .row')) {
+			const r = readRow(row);
+			const bad = !r.blank && !r.valid;
+			markRow(row, bad);
+			blocked ||= bad;
+		}
+		if (blocked) {
+			showBuildError('fixRows');
+			return;
+		}
+		cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
+		if (!isComplete(cleaned)) return;
 	}
-	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
-	if (blocked) {
-		showBuildError('fixRows');
-		return;
-	}
-	if (!isComplete(cleaned)) return;
 	const url = `${location.origin}${location.pathname}#d=${encodeGroup(cleaned)}`;
 	if (!navigator.clipboard) {
 		showBuildError('copyFailed');
@@ -429,11 +441,26 @@ function wireApp() {
 			return;
 		}
 
-		if (state.mode === 'view') {
-			if (target.closest('#edit') !== null) {
-				state = { mode: 'edit', data: state.data, badLink: false };
-				renderPage();
-			}
+		const copyButton = target.closest('#copy-link');
+		if (copyButton !== null) {
+			copyLink(/** @type {HTMLButtonElement} */ (copyButton));
+			return;
+		}
+
+		if (target.closest('#edit') !== null) {
+			state = { mode: 'edit', data: state.data, badLink: false };
+			renderPage();
+			return;
+		}
+
+		if (target.closest('#done') !== null) {
+			const draft = readForm();
+			state = {
+				mode: 'view',
+				data: { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) },
+				badLink: false,
+			};
+			renderPage();
 			return;
 		}
 
@@ -448,10 +475,7 @@ function wireApp() {
 				removeButton.closest('.row')?.remove();
 				refreshComputed();
 			}
-			return;
 		}
-		const copyButton = target.closest('#copy-link');
-		if (copyButton !== null) copyLink(/** @type {HTMLButtonElement} */ (copyButton));
 	});
 
 	app.addEventListener('input', () => {

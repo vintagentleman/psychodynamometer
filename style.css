@@ -364,9 +364,11 @@ button {
 }
 
 /* stylelint-disable-next-line no-descending-specificity --
-   only sets padding; the higher-specificity `.block + .page-actions` sets
-   border-top, so there is no real cascade conflict to reorder around. */
+   sets padding + button layout; the higher-specificity `.block + .page-actions`
+   sets border-top, so there is no real cascade conflict to reorder around. */
 .page-actions {
+	display: flex;
+	gap: 8px;
 	padding: 12px 20px;
 }
 

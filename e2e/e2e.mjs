@@ -133,6 +133,7 @@ const rows = await page.$$('.sessions .session');
 check('schedule rows = 11', rows.length === 11, `got ${rows.length}`);
 check('past rows marked', (await page.$$('.sessions .session.past')).length === 7);
 check('next row emphasized', (await page.$$('.sessions .session.next')).length === 1);
+check('view offers copy link', (await page.$$('#copy-link')).length === 1);
 
 // --- Dark mode ---
 await page.emulateMedia({ colorScheme: 'dark' });
@@ -154,6 +155,7 @@ await page.click('button.lang[data-lang="en"]');
 await page.click('#edit');
 check('edit prefills 11 rows', (await page.$$('#rows .row')).length === 11);
 check('edit prefills title', (await page.inputValue('input[name="title"]')) === 'Tuesday Group');
+check('edit offers a done toggle', (await page.$$('#done')).length === 1);
 
 // --- Edit (build) mode from scratch ---
 await page.goto(`${BASE}/`);
@@ -225,6 +227,17 @@ check(
 );
 await page.click('#rows .row:nth-child(2) .remove');
 check('editing clears the status message', !(await page.isVisible('.note-copyerror')));
+
+await page.click('#done');
+check('done exits edit mode', (await page.$$('.page.editing')).length === 0);
+check('done shows the built group', (await page.textContent('.masthead h1')) === 'Test Group');
+await page.click('#copy-link');
+const fromView = await page.evaluate(() => navigator.clipboard.readText());
+check(
+	'copy link works from view',
+	/#d=[A-Za-z0-9_-]+$/.test(fromView),
+	fromView.slice(0, 60) + '…',
+);
 
 await page.goto(copied);
 check('copied link round-trips', (await page.textContent('.masthead h1')) === 'Test Group');
