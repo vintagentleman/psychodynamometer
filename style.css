@@ -389,6 +389,13 @@ button {
 		gap: 6px;
 	}
 
+	& .note-copyerror {
+		margin: 0;
+		color: var(--invalid);
+		background: none;
+		padding: 0;
+	}
+
 	& .row {
 		display: flex;
 		gap: 6px;

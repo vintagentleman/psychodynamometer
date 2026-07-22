@@ -121,12 +121,16 @@ function viewFragment(data, now, withFooter = false) {
 		target: formatHoursNum(data.targetHours, locale),
 	});
 
-	slot(fragment, '.hero-value').textContent = `${Math.round(percent)}%`;
+	const rounded = Math.round(percent);
+	slot(fragment, '.hero-value').textContent = `${rounded}%`;
 	slot(fragment, '.hero-side').textContent =
 		` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
 	const meter = slot(fragment, '.meter');
-	meter.setAttribute('role', 'img');
-	meter.setAttribute('aria-label', `${Math.round(percent)}%`);
+	meter.setAttribute('role', 'progressbar');
+	meter.setAttribute('aria-label', t(locale, 'progress'));
+	meter.setAttribute('aria-valuemin', '0');
+	meter.setAttribute('aria-valuemax', '100');
+	meter.setAttribute('aria-valuenow', String(rounded));
 	slot(fragment, '.meter-fill').style.width = `${percent}%`;
 
 	slot(fragment, '.next-when').textContent = next
@@ -216,13 +220,56 @@ function readForm() {
 	const ends = formData.getAll('end');
 	return {
 		title: String(formData.get('title') ?? ''),
-		targetHours: Number(formData.get('targetHours') ?? 0) || 0,
+		targetHours: Number(formData.get('targetHours')) || 0,
 		sessions: dates.map((date, i) => ({
 			date: String(date),
 			start: String(starts[i] ?? ''),
 			end: String(ends[i] ?? ''),
 		})),
 	};
+}
+
+/** @param {SessionInput} s */
+const isBlankInput = (s) => s.date === '' && s.start === '' && s.end === '';
+
+/**
+ * Read one builder row's raw values plus whether it is blank, fully filled, and
+ * parseable. The single place row state is derived; update and copyLink flag
+ * rows through it so their notions of blank/invalid can never drift apart.
+ * @param {Element} row
+ */
+function readRow(row) {
+	const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
+	const raw = { date, start, end };
+	return {
+		...raw,
+		filled: date !== '' && start !== '' && end !== '',
+		blank: isBlankInput(raw),
+		valid: parseSession(raw) !== null,
+	};
+}
+
+/**
+ * @param {Element} row
+ * @param {boolean} invalid
+ */
+function markRow(row, invalid) {
+	row.classList.toggle('invalid', invalid);
+	for (const input of row.querySelectorAll('input')) {
+		if (invalid) input.setAttribute('aria-invalid', 'true');
+		else input.removeAttribute('aria-invalid');
+	}
+}
+
+/** @param {string} key i18n key of the message to show in the role=status note. */
+function showBuildError(key) {
+	const note = slot(app, '.note-copyerror');
+	note.hidden = false;
+	note.textContent = t(locale, key);
+}
+
+function clearBuildError() {
+	slot(app, '.note-copyerror').hidden = true;
 }
 
 /** @param {GroupData} draft */
@@ -265,11 +312,12 @@ function buildFragment(data, badLink) {
 function update() {
 	const liveRows = slot(app, '#rows');
 	const preview = slot(app, '#preview');
+	clearBuildError();
 	for (const row of liveRows.querySelectorAll('.row')) {
-		const inputs = row.querySelectorAll('input');
-		const [date, start, end] = [...inputs].map((input) => input.value);
-		const filled = date !== '' && start !== '' && end !== '';
-		row.classList.toggle('invalid', filled && parseSession({ date, start, end }) === null);
+		const r = readRow(row);
+		// While typing, only a fully-filled-yet-unparseable row is flagged — a
+		// half-entered row is not yet wrong.
+		markRow(row, r.filled && !r.valid);
 	}
 	const draft = readForm();
 	if (isComplete(draft)) preview.replaceChildren(viewFragment(draft, new Date()));
@@ -300,18 +348,22 @@ function copyLink(copyButton) {
 	const draft = readForm();
 	let blocked = false;
 	for (const row of liveRows.querySelectorAll('.row')) {
-		const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
-		const empty = date === '' && start === '' && end === '';
-		const bad = !empty && parseSession({ date, start, end }) === null;
-		row.classList.toggle('invalid', bad);
+		const r = readRow(row);
+		const bad = !r.blank && !r.valid;
+		markRow(row, bad);
 		blocked ||= bad;
 	}
-	const cleaned = {
-		...draft,
-		sessions: draft.sessions.filter((s) => !(s.date === '' && s.start === '' && s.end === '')),
-	};
-	if (blocked || !isComplete(cleaned)) return;
+	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
+	if (blocked) {
+		showBuildError('fixRows');
+		return;
+	}
+	if (!isComplete(cleaned)) return;
 	const url = `${location.origin}${location.pathname}#d=${encodeGroup(cleaned)}`;
+	if (!navigator.clipboard) {
+		showBuildError('copyFailed');
+		return;
+	}
 	navigator.clipboard
 		.writeText(url)
 		.then(() => {
@@ -320,7 +372,7 @@ function copyLink(copyButton) {
 				copyButton.textContent = t(locale, 'copyLink');
 			}, 1500);
 		})
-		.catch(() => {});
+		.catch(() => showBuildError('copyFailed'));
 }
 
 /**

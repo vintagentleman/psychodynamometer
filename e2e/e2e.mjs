@@ -80,6 +80,23 @@ const masthead = (await page.textContent('.masthead-hours')) ?? '';
 check('masthead hours line', /of 41.5 contracted hours/.test(masthead), masthead.trim());
 const hero = (await page.textContent('.hero')) ?? '';
 check('hero percent + remaining', /%/.test(hero) && /h left/.test(hero), hero.trim());
+const heroPct = ((await page.textContent('.hero-value')) ?? '').replace('%', '');
+const meterAria = await page.$eval('.meter', (el) => ({
+	role: el.getAttribute('role'),
+	now: el.getAttribute('aria-valuenow'),
+	min: el.getAttribute('aria-valuemin'),
+	max: el.getAttribute('aria-valuemax'),
+	label: el.getAttribute('aria-label'),
+}));
+check(
+	'meter exposes labelled progressbar semantics',
+	meterAria.role === 'progressbar' &&
+		meterAria.min === '0' &&
+		meterAria.max === '100' &&
+		meterAria.now === heroPct &&
+		!!meterAria.label,
+	JSON.stringify(meterAria),
+);
 const nextWhen = (await page.textContent('.next-when')) ?? '';
 check('next session spelled long date', /23 July/.test(nextWhen), nextWhen.trim());
 check('no numeric DD.MM anywhere', !/\d{2}\.\d{2}/.test((await page.textContent('.page')) ?? ''));
@@ -152,8 +169,16 @@ check('preview shows title', (await page.textContent('#preview .masthead h1')) =
 
 await page.fill('input[name="end"]', '09:00');
 check('invalid row flagged', (await page.$$('#rows .row.invalid')).length === 1);
+check(
+	'invalid row marks its inputs aria-invalid',
+	(await page.$$('#rows .row input[aria-invalid="true"]')).length === 3,
+);
 await page.fill('input[name="end"]', '13:00');
 check('invalid flag clears', (await page.$$('#rows .row.invalid')).length === 0);
+check(
+	'aria-invalid clears with the flag',
+	(await page.$$('#rows .row input[aria-invalid="true"]')).length === 0,
+);
 
 await page.click('#add-row');
 check('add row works', (await page.$$('#rows .row')).length === 2);
@@ -185,17 +210,26 @@ check(
 	'partial row blocks copy',
 	(await page.evaluate(() => navigator.clipboard.readText())) === copied,
 );
+check('blocked copy announces why', await page.isVisible('.note-copyerror'));
+check(
+	'blocked-copy message names the fix',
+	((await page.textContent('.note-copyerror')) ?? '').includes('Fix the highlighted'),
+);
 await page.click('#rows .row:nth-child(2) .remove');
+check('editing clears the status message', !(await page.isVisible('.note-copyerror')));
 
 await page.goto(copied);
 check('copied link round-trips', (await page.textContent('.masthead h1')) === 'Test Group');
 
 // --- Bad hash ---
 await page.goto(`${BASE}/#d=%%%garbage%%%`);
-check('bad hash -> build + note', (await page.$$('.note')).length === 2);
+check(
+	'bad hash -> build + note',
+	(await page.$$('#build')).length === 1 && (await page.isVisible('.note-badlink')),
+);
 check(
 	'bad-link note text',
-	((await page.textContent('.note')) ?? '').includes('could not be read'),
+	((await page.textContent('.note-badlink')) ?? '').includes('could not be read'),
 );
 
 // --- Rhythm edge cases ---
