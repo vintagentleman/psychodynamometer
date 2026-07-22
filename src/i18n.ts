@@ -68,10 +68,10 @@ export const messages: Record<Locale, Record<string, string>> = {
 		start: 'Начало',
 		end: 'Конец',
 		remove: 'Удалить',
-		timeZone: 'Time zone',
-		timesInZone: 'Times are in the group’s zone.',
-		groupTime: 'group time',
-		yourTime: 'your time',
+		timeZone: 'Часовой пояс',
+		timesInZone: 'Время указано в часовом поясе группы.',
+		groupTime: 'время группы',
+		yourTime: 'ваше время',
 	},
 };
 
