@@ -12,40 +12,108 @@ const group = {
 	],
 };
 
-test('codec round-trips cyrillic and separator characters', () => {
+test('codec round-trips unicode titles and multiple sessions', () => {
 	assert.deepEqual(decodeGroup(encodeGroup(group)), group);
 });
 
-test('payload is compact and fragment-safe', () => {
+test('payload is a bare base64url token, no structure leaked', () => {
 	const payload = encodeGroup(group);
-	assert.match(payload, /^2~41\.5~260602\.1900\.2230_260809\.0800\.1600~/);
-	assert.doesNotMatch(payload, /[^A-Za-z0-9~._%!*'()-]/);
+	assert.match(payload, /^[A-Za-z0-9_-]+$/); // base64url, no padding, no '~'
+	assert.ok(payload.length < 90, `expected compact, got ${payload.length}`);
 });
 
-test('empty sessions encode to an empty field', () => {
+test('encode stamps the format marker and packs target as half-hours', () => {
+	const bytes = Buffer.from(encodeGroup(group), 'base64url');
+	assert.equal(bytes[0], 1); // format marker
+	assert.equal((bytes[1] << 8) | bytes[2], 83); // 41.5 h * 2
+	assert.equal(bytes[3], 2); // session count
+});
+
+test('decode reads a hand-packed blob', () => {
+	const dateWord = ((2026 - 2000) << 9) | (1 << 5) | 5; // 2026-01-05
+	const timeWord = ((10 * 60) << 13) | ((13 * 60) << 2); // 10:00-13:00
+	const blob = Buffer.from([
+		1,
+		0,
+		40, // target 20 h
+		1, // one session
+		(dateWord >> 8) & 0xff,
+		dateWord & 0xff,
+		(timeWord >> 16) & 0xff,
+		(timeWord >> 8) & 0xff,
+		timeWord & 0xff,
+		...Buffer.from('Hi', 'utf-8'),
+	]);
+	assert.deepEqual(decodeGroup(blob.toString('base64url')), {
+		title: 'Hi',
+		targetHours: 20,
+		sessions: [{ date: '2026-01-05', start: '10:00', end: '13:00' }],
+	});
+});
+
+test('round-trips field boundaries', () => {
+	/** @type {import('../src/lib.js').GroupData} */
+	const edge = {
+		title: '🎯',
+		targetHours: 1000,
+		sessions: [
+			{ date: '2000-01-01', start: '00:00', end: '23:59' },
+			{ date: '2099-12-31', start: '00:00', end: '00:01' },
+		],
+	};
+	assert.deepEqual(decodeGroup(encodeGroup(edge)), edge);
+});
+
+test('empty sessions round-trip to an empty list', () => {
 	const decoded = decodeGroup(encodeGroup({ ...group, sessions: [] }));
 	assert.ok(decoded);
 	assert.deepEqual(decoded.sessions, []);
+	assert.equal(decoded.title, group.title);
+});
+
+test('target is quantized to the half hour', () => {
+	const decoded = decodeGroup(encodeGroup({ ...group, targetHours: 40.3 }));
+	assert.ok(decoded);
+	assert.equal(decoded.targetHours, 40.5);
 });
 
 test('decode returns null on malformed payloads', () => {
-	assert.equal(decodeGroup('garbage'), null);
-	assert.equal(decodeGroup('eyJ2IjoxfQ'), null); // old v1 base64url blob
-	assert.equal(decodeGroup('1~10~~t'), null); // unknown version
-	assert.equal(decodeGroup('2~10'), null); // missing fields
-	assert.equal(decodeGroup('2~~260602.1900.2230~t'), null); // empty target
-	assert.equal(decodeGroup('2~1e999~260602.1900.2230~t'), null); // non-finite target
-	assert.equal(decodeGroup('2~-5~260602.1900.2230~t'), null); // negative target
-	assert.equal(decodeGroup('2~10~26060.1900.2230~t'), null); // short date token
-	assert.equal(decodeGroup('2~10~260602.1900~t'), null); // missing end time
-	assert.equal(decodeGroup('2~10~~%E0%A4%A'), null); // broken percent-encoding
+	assert.equal(decodeGroup(''), null); // empty
+	assert.equal(decodeGroup('%%%garbage%%%'), null); // not base64url
+	assert.equal(decodeGroup(Buffer.from([1, 2]).toString('base64url')), null); // < 4 bytes
+	assert.equal(decodeGroup(Buffer.from([2, 0, 40, 0]).toString('base64url')), null); // wrong marker
+	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 1, 0, 0, 0]).toString('base64url')), null); // N=1, < 5 session bytes
+	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 5]).toString('base64url')), null); // N=5, no session bytes
 });
 
-test('decode rejects tokens that are digit-shaped but not real datetimes', () => {
-	assert.equal(decodeGroup('2~10~261399.1900.2230~t'), null); // month 13, day 99
-	assert.equal(decodeGroup('2~10~260230.1000.1100~t'), null); // Feb 30 would roll to Mar 2
-	assert.equal(decodeGroup('2~10~260101.2500.2600~t'), null); // hour 25
-	assert.equal(decodeGroup('2~10~260101.1100.1000~t'), null); // end before start
+test('decode rejects packed fields that are not real datetimes', () => {
+	/** @param {number} dateWord @param {number} startMin @param {number} endMin */
+	const pack = (dateWord, startMin, endMin) => {
+		const timeWord = (startMin << 13) | (endMin << 2);
+		return Buffer.from([
+			1,
+			0,
+			40,
+			1,
+			(dateWord >> 8) & 0xff,
+			dateWord & 0xff,
+			(timeWord >> 16) & 0xff,
+			(timeWord >> 8) & 0xff,
+			timeWord & 0xff,
+		]).toString('base64url');
+	};
+	const feb30 = ((2026 - 2000) << 9) | (2 << 5) | 30;
+	assert.equal(decodeGroup(pack(feb30, 600, 660)), null); // Feb 30 rolls over
+	const month13 = ((2026 - 2000) << 9) | (13 << 5) | 1;
+	assert.equal(decodeGroup(pack(month13, 600, 660)), null); // month 13
+	const jan1 = ((2026 - 2000) << 9) | (1 << 5) | 1;
+	assert.equal(decodeGroup(pack(jan1, 1500, 1560)), null); // minute 1500 -> hour 25
+	assert.equal(decodeGroup(pack(jan1, 700, 600)), null); // end before start
+});
+
+test('decode rejects a title with a broken utf-8 tail', () => {
+	// marker, target, N=0, then a lone 0xC3 (incomplete 2-byte sequence)
+	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 0, 0xc3]).toString('base64url')), null);
 });
 
 import { parseSession, parseSessions, computeProgress } from '../src/lib.js';

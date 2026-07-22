@@ -1,56 +1,110 @@
 /** @typedef {{ date: string, start: string, end: string }} SessionInput */
 /** @typedef {{ title: string, targetHours: number, sessions: SessionInput[] }} GroupData */
 
-const SESSION_TOKEN = /^(\d{2})(\d{2})(\d{2})\.(\d{2})(\d{2})\.(\d{2})(\d{2})$/;
+const FORMAT = 1;
+const utf8Encoder = new TextEncoder();
+const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+
+/** @param {number} n */
+const pad2 = (n) => String(n).padStart(2, '0');
 
 /**
- * Encode group data as a compact URL-fragment-safe string (schema 2):
- * `2~<targetHours>~<sessions>~<title>`. Sessions are `_`-joined
- * `YYMMDD.HHMM.HHMM`; the title is percent-encoded and kept LAST so an
- * embedded `~` cannot break parsing (the decoder rejoins the tail).
+ * Encode group data as a compact base64url URL-fragment token. The payload is
+ * a binary blob — format marker, target in half-hours, session count, one
+ * 5-byte record per session (packed date + start/end minute-of-day), then the
+ * UTF-8 title — carrying no readable structure by design.
  * @param {GroupData} data
  * @returns {string}
  */
 export function encodeGroup(data) {
-	const sessions = data.sessions
-		.map(
-			(s) =>
-				`${s.date.replaceAll('-', '').slice(2)}.${s.start.replace(':', '')}.${s.end.replace(':', '')}`,
-		)
-		.join('_');
-	return `2~${data.targetHours}~${sessions}~${encodeURIComponent(data.title)}`;
+	const title = utf8Encoder.encode(data.title);
+	const bytes = new Uint8Array(4 + data.sessions.length * 5 + title.length);
+	const halfHours = Math.round(data.targetHours * 2);
+	bytes[0] = FORMAT;
+	bytes[1] = (halfHours >> 8) & 0xff;
+	bytes[2] = halfHours & 0xff;
+	bytes[3] = data.sessions.length;
+	let at = 4;
+	for (const s of data.sessions) {
+		const [year, month, day] = s.date.split('-').map(Number);
+		const [startH, startMin] = s.start.split(':').map(Number);
+		const [endH, endMin] = s.end.split(':').map(Number);
+		const dateWord = ((year - 2000) << 9) | (month << 5) | day;
+		const timeWord = ((startH * 60 + startMin) << 13) | ((endH * 60 + endMin) << 2);
+		bytes[at++] = (dateWord >> 8) & 0xff;
+		bytes[at++] = dateWord & 0xff;
+		bytes[at++] = (timeWord >> 16) & 0xff;
+		bytes[at++] = (timeWord >> 8) & 0xff;
+		bytes[at++] = timeWord & 0xff;
+	}
+	bytes.set(title, at);
+	return toBase64url(bytes);
 }
 
 /**
- * Decode a schema-2 payload back into group data. Null on any malformation.
+ * Decode a base64url token back into group data. Null on any malformation.
  * @param {string} payload
  * @returns {GroupData | null}
  */
 export function decodeGroup(payload) {
-	const [version, target, sessionField, ...titleParts] = payload.split('~');
-	if (version !== '2' || sessionField === undefined || titleParts.length === 0) return null;
-	if (target === '') return null;
-	const targetHours = Number(target);
-	if (!Number.isFinite(targetHours) || targetHours < 0) return null;
+	const bytes = fromBase64url(payload);
+	if (bytes === null || bytes.length < 4 || bytes[0] !== FORMAT) return null;
+	const targetHours = ((bytes[1] << 8) | bytes[2]) / 2;
+	const count = bytes[3];
+	if (bytes.length < 4 + count * 5) return null;
 	/** @type {SessionInput[]} */
 	const sessions = [];
-	if (sessionField !== '') {
-		for (const token of sessionField.split('_')) {
-			const match = SESSION_TOKEN.exec(token);
-			if (match === null) return null;
-			const [, yy, mo, dd, sh, sm, eh, em] = match;
-			const session = { date: `20${yy}-${mo}-${dd}`, start: `${sh}:${sm}`, end: `${eh}:${em}` };
-			if (parseSession(session) === null) return null;
-			sessions.push(session);
-		}
+	let at = 4;
+	for (let i = 0; i < count; i++) {
+		const dateWord = (bytes[at] << 8) | bytes[at + 1];
+		const timeWord = (bytes[at + 2] << 16) | (bytes[at + 3] << 8) | bytes[at + 4];
+		at += 5;
+		const startMin = (timeWord >> 13) & 0x7ff;
+		const endMin = (timeWord >> 2) & 0x7ff;
+		const session = {
+			date: `${2000 + (dateWord >> 9)}-${pad2((dateWord >> 5) & 0xf)}-${pad2(dateWord & 0x1f)}`,
+			start: `${pad2(Math.floor(startMin / 60))}:${pad2(startMin % 60)}`,
+			end: `${pad2(Math.floor(endMin / 60))}:${pad2(endMin % 60)}`,
+		};
+		if (parseSession(session) === null) return null;
+		sessions.push(session);
 	}
 	let title;
 	try {
-		title = decodeURIComponent(titleParts.join('~'));
+		title = utf8Decoder.decode(bytes.subarray(at));
 	} catch {
 		return null;
 	}
 	return { title, targetHours, sessions };
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+function toBase64url(bytes) {
+	let binary = '';
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+}
+
+/**
+ * @param {string} token
+ * @returns {Uint8Array | null}
+ */
+function fromBase64url(token) {
+	if (!/^[A-Za-z0-9_-]*$/.test(token)) return null;
+	const b64 = token.replaceAll('-', '+').replaceAll('_', '/');
+	const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+	let binary;
+	try {
+		binary = atob(padded);
+	} catch {
+		return null;
+	}
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+	return bytes;
 }
 
 /** @typedef {SessionInput & { startDT: Date, endDT: Date, hours: number }} Session */

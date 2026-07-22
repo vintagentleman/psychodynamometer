@@ -196,7 +196,11 @@ const flashed = await page
 	.catch(() => false);
 check('copied flash', flashed);
 const copied = await page.evaluate(() => navigator.clipboard.readText());
-check('clipboard has compact v2 url', /#d=2~/.test(copied), copied.slice(0, 60) + '…');
+check(
+	'clipboard has compact base64url link',
+	/#d=[A-Za-z0-9_-]+$/.test(copied),
+	copied.slice(0, 60) + '…',
+);
 check('compact link is short', copied.length < 200, `${copied.length} chars`);
 
 await page.click('#add-row');
