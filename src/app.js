@@ -187,10 +187,9 @@ function shareableGroup(draft) {
 }
 
 /**
- * Mirror the current edit into the address bar via replaceState — no reload, no
- * hashchange (so no re-render / lost caret), no history entry. A shareable draft
- * becomes a #d= link; anything incomplete or invalid clears the hash so the URL
- * never lies.
+ * Mirror the current edit into the address bar with replaceState, not
+ * `location.hash` — assigning the hash fires hashchange → re-render → lost
+ * caret. A shareable draft becomes a #d= link; anything else clears the hash.
  */
 function syncUrl() {
 	const group = shareableGroup(readForm());
@@ -205,9 +204,8 @@ function syncUrl() {
 let state = { mode: 'edit', data: null, badLink: false };
 
 /**
- * Recompute the derived regions — progress/meter, next, rhythm, and (view only)
- * the masthead sub-line and schedule list — from `data`. Never touches inputs,
- * so it is safe to call on every keystroke.
+ * Recompute the derived regions from `data`. Never touches inputs, so it is
+ * safe to call on every keystroke — the caret survives.
  * @param {Element} page
  * @param {GroupData} data
  * @param {Date} now
@@ -321,10 +319,9 @@ function fillScheduleView(page, sessions, next, now) {
 }
 
 /**
- * Build the masthead sub-line "{completed} of {target} …". The target is plain
- * text in view and an inline input in edit; the completed figure lives in a
- * .subline-completed span that fillDerived updates in place, so editing the
- * target never rebuilds it and the caret survives.
+ * Build the masthead sub-line — target as text (view) or inline input (edit).
+ * The completed figure sits in its own .subline-completed span so the live
+ * refresh never rebuilds the target input, keeping its caret.
  * @param {Element} page
  * @param {number} targetHours
  * @param {'view' | 'edit'} mode
@@ -433,8 +430,7 @@ function refreshComputed() {
 }
 
 /**
- * Copy the current group's share link to the clipboard. In edit mode the draft
- * is validated first; in view mode the already-complete data is re-encoded.
+ * Copy the current group's share link to the clipboard.
  * @param {HTMLButtonElement} copyButton
  */
 function copyLink(copyButton) {

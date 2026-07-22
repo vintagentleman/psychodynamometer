@@ -172,9 +172,8 @@ export function computeProgress(sessions, targetHours, now) {
 }
 
 /**
- * Meter segment widths as percentages of the target: solid done, striped
- * already-scheduled upcoming, and (implicitly) the grey unplanned remainder.
- * Clamped so done + upcoming never exceed 100%. The now-tick sits at donePct.
+ * Done and upcoming widths as a % of target, clamped so the two never exceed
+ * 100% (overshoot is absorbed).
  * @param {number} completedHours
  * @param {number} upcomingHours
  * @param {number} targetHours
