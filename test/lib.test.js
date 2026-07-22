@@ -464,3 +464,60 @@ test('formatLocalTime renders HH:MM', () => {
 	// localised value is asserted in e2e where the browser timezone is pinned
 	assert.match(formatLocalTime(Date.UTC(2026, 5, 18, 16, 0), 'en'), /^\d{2}:\d{2}$/);
 });
+
+import { viewerMatchesZone } from '../src/lib.js';
+
+test('viewerMatchesZone compares the viewer offset to the group offset', () => {
+	const ms = Date.UTC(2026, 5, 18, 16, 0);
+	// UTC+14 and UTC-12 have different offsets, so the host (whatever its zone)
+	// cannot match both \u2014 host-independent, and it exercises the comparison.
+	assert.ok(!(viewerMatchesZone(ms, 'Etc/GMT-14') && viewerMatchesZone(ms, 'Etc/GMT+12')));
+});
+
+import { isBlankInput, isComplete, shareableGroup } from '../src/lib.js';
+
+const draft = {
+	title: 'G',
+	targetHours: 10,
+	timeZone: 'UTC',
+	sessions: [{ date: '2026-01-05', start: '10:00', end: '13:00' }],
+};
+
+test('isBlankInput is true only when every field is empty', () => {
+	assert.equal(isBlankInput({ date: '', start: '', end: '' }), true);
+	assert.equal(isBlankInput({ date: '2026-01-05', start: '', end: '' }), false);
+});
+
+test('isComplete needs a title, a positive target and at least one valid session', () => {
+	assert.equal(isComplete(draft), true);
+	assert.equal(isComplete({ ...draft, title: '  ' }), false);
+	assert.equal(isComplete({ ...draft, targetHours: 0 }), false);
+	assert.equal(isComplete({ ...draft, sessions: [] }), false);
+	assert.equal(
+		isComplete({ ...draft, sessions: [{ date: '2026-01-05', start: '13:00', end: '10:00' }] }),
+		false,
+	);
+});
+
+test('shareableGroup drops blank rows and returns the cleaned group when complete', () => {
+	const withBlank = {
+		...draft,
+		sessions: [...draft.sessions, { date: '', start: '', end: '' }],
+	};
+	const out = shareableGroup(withBlank);
+	assert.ok(out);
+	assert.equal(out.sessions.length, 1);
+	assert.equal(out.timeZone, 'UTC');
+});
+
+test('shareableGroup returns null when a non-blank row is invalid', () => {
+	const bad = {
+		...draft,
+		sessions: [...draft.sessions, { date: '2026-02-01', start: '13:00', end: '10:00' }],
+	};
+	assert.equal(shareableGroup(bad), null);
+});
+
+test('shareableGroup returns null when the group is incomplete', () => {
+	assert.equal(shareableGroup({ ...draft, title: '' }), null);
+});

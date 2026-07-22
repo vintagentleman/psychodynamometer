@@ -17,6 +17,10 @@ import {
 	formatOffsetTag,
 	formatLocalTime,
 	viewerMatchesZone,
+	isBlankInput,
+	isComplete,
+	shareableGroup,
+	detectedZone,
 } from './lib.js';
 import { messages, resolveLocale, t } from './i18n.js';
 
@@ -41,14 +45,6 @@ function storeLang(lang) {
 		localStorage.setItem('lang', lang);
 	} catch {
 		/* storage blocked — non-fatal */
-	}
-}
-
-function detectedZone() {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().timeZone;
-	} catch {
-		return 'UTC';
 	}
 }
 
@@ -118,9 +114,6 @@ function sessionRow(input) {
 	return fragment;
 }
 
-/** @param {SessionInput} s */
-const isBlankInput = (s) => s.date === '' && s.start === '' && s.end === '';
-
 /** @param {Element} row */
 function readRow(row) {
 	const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
@@ -183,27 +176,6 @@ function readForm() {
 		timeZone: zone?.value || detectedZone(),
 		sessions,
 	};
-}
-
-/** @param {GroupData} draft */
-function isComplete(draft) {
-	return (
-		draft.title.trim() !== '' &&
-		draft.targetHours > 0 &&
-		parseSessions(draft.sessions, draft.timeZone).length > 0
-	);
-}
-
-/**
- * The draft as a shareable group, or null if any non-blank row is invalid or a
- * required field is missing — i.e. exactly what would produce a valid link.
- * @param {GroupData} draft
- * @returns {GroupData | null}
- */
-function shareableGroup(draft) {
-	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
-	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
-	return isComplete(cleaned) ? cleaned : null;
 }
 
 /**

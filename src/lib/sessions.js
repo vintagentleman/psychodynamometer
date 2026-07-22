@@ -169,3 +169,27 @@ export function nowWeekIndex(buckets, nowCivil) {
 	}
 	return null;
 }
+
+/** @param {SessionInput} s */
+export const isBlankInput = (s) => s.date === '' && s.start === '' && s.end === '';
+
+/** @param {GroupData} draft */
+export function isComplete(draft) {
+	return (
+		draft.title.trim() !== '' &&
+		draft.targetHours > 0 &&
+		parseSessions(draft.sessions, draft.timeZone).length > 0
+	);
+}
+
+/**
+ * The draft as a shareable group, or null if any non-blank row is invalid or a
+ * required field is missing — i.e. exactly what would produce a valid link.
+ * @param {GroupData} draft
+ * @returns {GroupData | null}
+ */
+export function shareableGroup(draft) {
+	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
+	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
+	return isComplete(cleaned) ? cleaned : null;
+}

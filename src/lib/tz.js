@@ -66,3 +66,15 @@ export function zonedCivilDate(now, zone) {
 export function viewerMatchesZone(ms, zone) {
 	return zoneOffsetMs(ms, zone) === -new Date(ms).getTimezoneOffset() * 60000;
 }
+
+/**
+ * The viewer's own IANA zone, for defaulting a fresh group's timezone.
+ * @returns {string}
+ */
+export function detectedZone() {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().timeZone;
+	} catch {
+		return 'UTC';
+	}
+}
