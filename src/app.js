@@ -24,6 +24,7 @@ import {
 } from './lib.js';
 import { messages, t } from './i18n.js';
 import { app, locale, setLocale, state, setState, storeLang } from './app/store.js';
+import { cloneTemplate, slot, segment, sessionRow } from './app/dom.js';
 
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
@@ -31,45 +32,6 @@ import { app, locale, setLocale, state, setState, storeLang } from './app/store.
 /** @typedef {import('./lib.js').WeekBucket} WeekBucket */
 
 document.documentElement.lang = locale;
-
-/**
- * Clone a template and resolve its data-i18n / data-i18n-aria bindings.
- * @param {string} id
- * @returns {DocumentFragment}
- */
-function cloneTemplate(id) {
-	const template = /** @type {HTMLTemplateElement} */ (document.getElementById(id));
-	const fragment = /** @type {DocumentFragment} */ (template.content.cloneNode(true));
-	for (const el of fragment.querySelectorAll('[data-i18n]')) {
-		el.textContent = t(locale, /** @type {HTMLElement} */ (el).dataset.i18n ?? '');
-	}
-	for (const el of fragment.querySelectorAll('[data-i18n-aria]')) {
-		el.setAttribute(
-			'aria-label',
-			t(locale, /** @type {HTMLElement} */ (el).dataset.i18nAria ?? ''),
-		);
-	}
-	return fragment;
-}
-
-/**
- * @param {DocumentFragment | Element} root
- * @param {string} selector
- */
-function slot(root, selector) {
-	return /** @type {HTMLElement} */ (root.querySelector(selector));
-}
-
-/**
- * @param {'done' | 'upcoming'} kind
- * @param {number} fraction
- */
-function segment(kind, fraction) {
-	const seg = /** @type {HTMLElement} */ (cloneTemplate('tpl-seg').firstElementChild);
-	seg.classList.add(kind);
-	seg.style.height = `${fraction * 100}%`;
-	return seg;
-}
 
 function currentPayload() {
 	const match = location.hash.match(/^#d=(.+)$/);
@@ -83,15 +45,6 @@ function topbarFragment() {
 		button.classList.toggle('active', locale === lang);
 		button.setAttribute('aria-pressed', String(locale === lang));
 	}
-	return fragment;
-}
-
-/** @param {SessionInput} input */
-function sessionRow(input) {
-	const fragment = cloneTemplate('tpl-form-row');
-	/** @type {HTMLInputElement} */ (slot(fragment, '[name="date"]')).value = input.date;
-	/** @type {HTMLInputElement} */ (slot(fragment, '[name="start"]')).value = input.start;
-	/** @type {HTMLInputElement} */ (slot(fragment, '[name="end"]')).value = input.end;
 	return fragment;
 }
 
