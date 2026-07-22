@@ -1,14 +1,20 @@
 # psychodynamometer
 
-Static group-progress visualiser (GitHub Pages). No bundler, no minifier, no
-runtime dependencies, no frameworks — plain ES modules served as authored.
+Static group-progress visualiser (GitHub Pages), authored in TypeScript and
+built with Vite — build-time only. No runtime dependencies, no frameworks: the
+shipped `dist/` bundle is plain JS + CSS with nothing else. Vite bundles and
+minifies JS; lightningcss transforms and minifies CSS.
 
 ## Hard rules
 
-- **Browser support: Baseline widely available.** No `light-dark()`, no
-  Temporal, no polyfills. Theme via `prefers-color-scheme` + `color-scheme`.
-  CSS nesting and `:has()` are fine.
-- **JS + JSDoc types only** (`tsc --noEmit --checkJs`, strict). No `.ts`.
+- **Browser target: Baseline widely available**, declared in package.json
+  `browserslist` and enforced by lightningcss (down-levels modern CSS to that
+  floor). No Temporal, no polyfills — the target needs none. Theme via
+  `prefers-color-scheme` + `color-scheme`. CSS nesting and `:has()` are fine.
+- **TypeScript, erasable-syntax-only** (`erasableSyntaxOnly` +
+  `verbatimModuleSyntax` + `isolatedModules`, strict). No enums, namespaces or
+  parameter properties — every annotation must fully erase, so Vite/esbuild
+  strip types per file. `tsc --noEmit` is the type gate; the build never checks.
 - **Tabs, not spaces**, everywhere.
 - **Conventional commits** (commitlint enforces), **subject line only** — no
   body, no `Co-Authored-By` or other trailers.
@@ -16,23 +22,26 @@ runtime dependencies, no frameworks — plain ES modules served as authored.
   in `~/.claude/specs/psycho-group-progress/`.
 - **Dates are never rendered numeric** (`18.06` caused a real missed
   session). Weekday + spelled month via `Intl.DateTimeFormat`, always.
-- Pure logic lives in `src/lib.js` (unit-tested, no DOM); DOM only in
-  `src/app.js`; UI strings only in `src/i18n.js` (en + ru, same key sets).
+- Pure logic lives in `src/lib/` (unit-tested, no DOM, no CSS or `import.meta`
+  imports — so Vitest and plain Node can both run it); DOM only in `src/app/`;
+  UI strings only in `src/i18n.ts` (en + ru, same key sets).
 - Group data is encoded in the URL hash as `#d=<base64url token>`. The token
-  is a binary blob — format marker, target in half-hours, session count, one
-  5-byte record per session (packed date + start/end minute-of-day), then the
-  UTF-8 title — base64url-encoded (see `src/lib.js`). It carries no readable
-  structure by design; a payload that fails to decode shows the "build a fresh
-  one" screen.
+  is a binary blob — format marker, target in half-hours, session count, zone,
+  one 5-byte record per session (packed date + start/end minute-of-day), then
+  the UTF-8 title — base64url-encoded (see `src/lib/codec.ts`). It carries no
+  readable structure by design; a payload that fails to decode shows the
+  "build a fresh one" screen.
 - User data reaches the DOM only via `<template>` cloning and
   `textContent`/attribute setters — never string-built HTML. Markup lives in
-  `index.html` templates; `src/app.js` only clones and fills them.
+  `index.html` templates; `src/app/` only clones and fills them.
 
 ## Commands
 
 - `npm run check` — the gate: typecheck + lint (markuplint + stylelint +
-  eslint) + format check + tests.
-- `npm test` — Node built-in runner, tests in `test/`.
-- `npm run test:e2e` — Playwright browser suite in `e2e/` (self-serving;
-  needs `npx playwright install chromium` once per machine).
-- `npx -y serve .` — local serving (modules need http).
+  eslint) + format check + tests (Vitest) + build.
+- `npm run dev` — Vite dev server.
+- `npm run build` — Vite build to `dist/` (gitignored, never committed).
+- `npm run preview` — serve the built `dist/` locally.
+- `npm test` — Vitest.
+- `npm run test:e2e` — Playwright suite in `e2e/`, over the built `dist/`
+  (needs `npx playwright install chromium` once per machine).
