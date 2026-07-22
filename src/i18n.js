@@ -45,7 +45,7 @@ export const messages = {
 		noUpcoming: 'Предстоящих сессий нет',
 		noSessions: 'Сессий пока нет',
 		done: 'проведено',
-		upcoming: 'впереди',
+		upcoming: 'запланировано',
 		edit: 'Редактировать',
 		doneEditing: 'Готово',
 		badLink: 'Не удалось прочитать ссылку — создайте новую ниже.',
