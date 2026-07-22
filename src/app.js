@@ -22,33 +22,14 @@ import {
 	shareableGroup,
 	detectedZone,
 } from './lib.js';
-import { messages, resolveLocale, t } from './i18n.js';
+import { messages, t } from './i18n.js';
+import { app, locale, setLocale, state, setState, storeLang } from './app/store.js';
 
 /** @typedef {import('./lib.js').GroupData} GroupData */
 /** @typedef {import('./lib.js').SessionInput} SessionInput */
 /** @typedef {import('./lib.js').Session} Session */
 /** @typedef {import('./lib.js').WeekBucket} WeekBucket */
 
-const app = /** @type {HTMLElement} */ (document.querySelector('#app'));
-
-function readStoredLang() {
-	try {
-		return localStorage.getItem('lang');
-	} catch {
-		return null;
-	}
-}
-
-/** @param {string} lang */
-function storeLang(lang) {
-	try {
-		localStorage.setItem('lang', lang);
-	} catch {
-		/* storage blocked — non-fatal */
-	}
-}
-
-let locale = resolveLocale(navigator.language, readStoredLang());
 document.documentElement.lang = locale;
 
 /**
@@ -192,9 +173,6 @@ function syncUrl() {
 		group ? `${location.pathname}#d=${encodeGroup(group)}` : location.pathname,
 	);
 }
-
-/** @type {{ mode: 'view' | 'edit', data: GroupData | null, badLink: boolean }} */
-let state = { mode: 'edit', data: null, badLink: false };
 
 /**
  * Recompute the derived regions from `data`. Never touches inputs, so it is
@@ -517,10 +495,10 @@ function wireApp() {
 		if (langButton !== null) {
 			const lang = /** @type {HTMLElement} */ (langButton).dataset.lang;
 			if (lang !== 'en' && lang !== 'ru') return;
-			locale = lang;
+			setLocale(lang);
 			storeLang(lang);
 			document.documentElement.lang = lang;
-			if (state.mode === 'edit') state = { ...state, data: readForm() };
+			if (state.mode === 'edit') setState({ ...state, data: readForm() });
 			renderPage();
 			return;
 		}
@@ -532,7 +510,7 @@ function wireApp() {
 		}
 
 		if (target.closest('#edit') !== null) {
-			state = { mode: 'edit', data: state.data, badLink: false };
+			setState({ mode: 'edit', data: state.data, badLink: false });
 			renderPage();
 			return;
 		}
@@ -540,11 +518,11 @@ function wireApp() {
 		if (target.closest('#done') !== null) {
 			syncUrl();
 			const draft = readForm();
-			state = {
+			setState({
 				mode: 'view',
 				data: { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) },
 				badLink: false,
-			};
+			});
 			renderPage();
 			return;
 		}
@@ -571,21 +549,21 @@ function wireApp() {
 function route() {
 	const payload = currentPayload();
 	if (payload === null) {
-		state = { mode: 'edit', data: null, badLink: false };
+		setState({ mode: 'edit', data: null, badLink: false });
 		renderPage();
 		return;
 	}
 	const data = decodeGroup(payload);
 	if (data === null) {
-		state = { mode: 'edit', data: null, badLink: true };
+		setState({ mode: 'edit', data: null, badLink: true });
 		renderPage();
 		return;
 	}
-	state = { mode: 'view', data, badLink: false };
+	setState({ mode: 'view', data, badLink: false });
 	try {
 		renderPage();
 	} catch {
-		state = { mode: 'edit', data: null, badLink: true };
+		setState({ mode: 'edit', data: null, badLink: true });
 		renderPage();
 	}
 }
