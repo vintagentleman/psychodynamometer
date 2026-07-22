@@ -208,8 +208,7 @@ button {
 			background: var(--viz-done);
 		}
 
-		/* solid = held, striped = planned — pattern survives any display or
-		   color vision, unlike a second shade of the same hue */
+		/* striped, not a second shade — reads under any display or color vision */
 		&.upcoming {
 			background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
 		}
@@ -256,8 +255,7 @@ button {
 	}
 
 	& .swatch {
-		/* big enough that edge anti-aliasing doesn't shift the perceived
-		   color away from the bars it stands for */
+		/* large enough that anti-aliasing doesn't distort the swatch's color */
 		display: inline-block;
 		width: 13px;
 		height: 13px;
@@ -289,8 +287,6 @@ button {
 			border-bottom: 1px solid var(--hairline);
 		}
 
-		/* filled dot = held, hollow ring = upcoming — same solid/planned
-		   language as the rhythm bars */
 		& .dot {
 			flex: none;
 			width: 8px;

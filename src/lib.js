@@ -40,8 +40,6 @@ export function decodeGroup(payload) {
 			if (match === null) return null;
 			const [, yy, mo, dd, sh, sm, eh, em] = match;
 			const session = { date: `20${yy}-${mo}-${dd}`, start: `${sh}:${sm}`, end: `${eh}:${em}` };
-			// Regex proves only digit shape; reject any token that isn't a real,
-			// in-order datetime so a corrupt link fails cleanly.
 			if (parseSession(session) === null) return null;
 			sessions.push(session);
 		}
@@ -71,8 +69,7 @@ export function parseSession(input) {
 	if (Number.isNaN(startDT.getTime()) || Number.isNaN(endDT.getTime()) || endDT <= startDT) {
 		return null;
 	}
-	// new Date rolls a bad day over (2026-02-30 -> Mar 2) and the hash encodes only
-	// a 2-digit year — reject both so no session round-trips to the wrong day.
+	// Reject silent date rollovers (2026-02-30 -> Mar 2) and years the 2-digit hash can't hold.
 	const [year, month, day] = input.date.split('-').map(Number);
 	if (
 		year < 2000 ||
@@ -83,8 +80,7 @@ export function parseSession(input) {
 	) {
 		return null;
 	}
-	// Wall-clock minutes, not the epoch delta: a session spanning a DST change
-	// must report the hours on the clock, not the shorter/longer real time elapsed.
+	// Wall-clock minutes, not the epoch delta, so a DST-spanning session reads right.
 	const [startH, startMin] = input.start.split(':').map(Number);
 	const [endH, endMin] = input.end.split(':').map(Number);
 	const hours = (endH * 60 + endMin - (startH * 60 + startMin)) / 60;
@@ -231,8 +227,6 @@ export function formatWeekRange(weekStart, locale) {
  * @param {string} locale
  */
 export function formatHoursNum(hours, locale) {
-	// Normalise the NBSP/narrow-NBSP group separator ICU emits (engines disagree),
-	// matching formatWeekRange.
 	return new Intl.NumberFormat(DATE_LOCALES[locale] ?? locale, {
 		maximumFractionDigits: 1,
 	})

@@ -232,12 +232,7 @@ function readForm() {
 /** @param {SessionInput} s */
 const isBlankInput = (s) => s.date === '' && s.start === '' && s.end === '';
 
-/**
- * Read one builder row's raw values plus whether it is blank, fully filled, and
- * parseable. The single place row state is derived; update and copyLink flag
- * rows through it so their notions of blank/invalid can never drift apart.
- * @param {Element} row
- */
+/** @param {Element} row */
 function readRow(row) {
 	const [date, start, end] = [...row.querySelectorAll('input')].map((input) => input.value);
 	const raw = { date, start, end };
@@ -261,7 +256,7 @@ function markRow(row, invalid) {
 	}
 }
 
-/** @param {string} key i18n key of the message to show in the role=status note. */
+/** @param {string} key */
 function showBuildError(key) {
 	const note = slot(app, '.note-copyerror');
 	note.hidden = false;
@@ -315,8 +310,6 @@ function update() {
 	clearBuildError();
 	for (const row of liveRows.querySelectorAll('.row')) {
 		const r = readRow(row);
-		// While typing, only a fully-filled-yet-unparseable row is flagged — a
-		// half-entered row is not yet wrong.
 		markRow(row, r.filled && !r.valid);
 	}
 	const draft = readForm();
