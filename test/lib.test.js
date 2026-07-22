@@ -1,5 +1,4 @@
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
+import { test, expect } from 'vitest';
 import { encodeGroup, decodeGroup } from '../src/lib.js';
 
 /** @type {import('../src/lib.js').GroupData} */
@@ -14,27 +13,26 @@ const group = {
 };
 
 test('codec round-trips unicode titles and multiple sessions', () => {
-	assert.deepEqual(decodeGroup(encodeGroup(group)), group);
+	expect(decodeGroup(encodeGroup(group))).toEqual(group);
 });
 
 test('codec preserves the group timezone', () => {
 	const decoded = decodeGroup(encodeGroup({ ...group, timeZone: 'America/New_York' }));
-	assert.ok(decoded);
-	assert.equal(decoded.timeZone, 'America/New_York');
+	expect(decoded?.timeZone).toBe('America/New_York');
 });
 
 test('payload is a bare base64url token, no structure leaked', () => {
 	const payload = encodeGroup(group);
-	assert.match(payload, /^[A-Za-z0-9_-]+$/); // base64url, no padding, no '~'
-	assert.ok(payload.length < 120, `expected compact, got ${payload.length}`);
+	expect(payload).toMatch(/^[A-Za-z0-9_-]+$/); // base64url, no padding, no '~'
+	expect(payload.length).toBeLessThan(120);
 });
 
 test('encode stamps the format marker, target, count and zone length', () => {
 	const bytes = Buffer.from(encodeGroup(group), 'base64url');
-	assert.equal(bytes[0], 2); // format marker
-	assert.equal((bytes[1] << 8) | bytes[2], 83); // 41.5 h * 2
-	assert.equal(bytes[3], 2); // session count
-	assert.equal(bytes[4], Buffer.byteLength('Europe/Moscow', 'utf-8')); // zone length (13)
+	expect(bytes[0]).toBe(2); // format marker
+	expect((bytes[1] << 8) | bytes[2]).toBe(83); // 41.5 h * 2
+	expect(bytes[3]).toBe(2); // session count
+	expect(bytes[4]).toBe(Buffer.byteLength('Europe/Moscow', 'utf-8')); // zone length (13)
 });
 
 test('decode reads a hand-packed blob', () => {
@@ -55,7 +53,7 @@ test('decode reads a hand-packed blob', () => {
 		timeWord & 0xff,
 		...Buffer.from('Hi', 'utf-8'),
 	]);
-	assert.deepEqual(decodeGroup(blob.toString('base64url')), {
+	expect(decodeGroup(blob.toString('base64url'))).toEqual({
 		title: 'Hi',
 		targetHours: 20,
 		timeZone: 'UTC',
@@ -74,39 +72,35 @@ test('round-trips field boundaries', () => {
 			{ date: '2099-12-31', start: '00:00', end: '00:01' },
 		],
 	};
-	assert.deepEqual(decodeGroup(encodeGroup(edge)), edge);
+	expect(decodeGroup(encodeGroup(edge))).toEqual(edge);
 });
 
 test('empty sessions round-trip to an empty list', () => {
 	const decoded = decodeGroup(encodeGroup({ ...group, sessions: [] }));
-	assert.ok(decoded);
-	assert.deepEqual(decoded.sessions, []);
-	assert.equal(decoded.title, group.title);
+	expect(decoded?.sessions).toEqual([]);
+	expect(decoded?.title).toBe(group.title);
 });
 
 test('target is quantized to the half hour', () => {
 	const decoded = decodeGroup(encodeGroup({ ...group, targetHours: 40.3 }));
-	assert.ok(decoded);
-	assert.equal(decoded.targetHours, 40.5);
+	expect(decoded?.targetHours).toBe(40.5);
 });
 
 test('decode returns null on malformed payloads', () => {
-	assert.equal(decodeGroup(''), null); // empty
-	assert.equal(decodeGroup('%%%garbage%%%'), null); // not base64url
-	assert.equal(decodeGroup(Buffer.from([2, 2]).toString('base64url')), null); // < 5 bytes
-	assert.equal(decodeGroup(Buffer.from([1, 0, 40, 0, 0]).toString('base64url')), null); // v1 marker
+	expect(decodeGroup('')).toBeNull(); // empty
+	expect(decodeGroup('%%%garbage%%%')).toBeNull(); // not base64url
+	expect(decodeGroup(Buffer.from([2, 2]).toString('base64url'))).toBeNull(); // < 5 bytes
+	expect(decodeGroup(Buffer.from([1, 0, 40, 0, 0]).toString('base64url'))).toBeNull(); // v1 marker
 	// zone "UTC", N=1, but only 3 of the 5 session bytes present
-	assert.equal(
+	expect(
 		decodeGroup(Buffer.from([2, 0, 40, 1, 3, 85, 84, 67, 0, 0, 0]).toString('base64url')),
-		null,
-	);
+	).toBeNull();
 	// zone "UTC", N=5, no session bytes
-	assert.equal(decodeGroup(Buffer.from([2, 0, 40, 5, 3, 85, 84, 67]).toString('base64url')), null);
+	expect(decodeGroup(Buffer.from([2, 0, 40, 5, 3, 85, 84, 67]).toString('base64url'))).toBeNull();
 	// zone "XXXX" is not a real IANA zone
-	assert.equal(
+	expect(
 		decodeGroup(Buffer.from([2, 0, 40, 0, 4, 88, 88, 88, 88]).toString('base64url')),
-		null,
-	);
+	).toBeNull();
 });
 
 test('decode rejects packed fields that are not real datetimes', () => {
@@ -130,32 +124,30 @@ test('decode rejects packed fields that are not real datetimes', () => {
 		]).toString('base64url');
 	};
 	const feb30 = ((2026 - 2000) << 9) | (2 << 5) | 30;
-	assert.equal(decodeGroup(pack(feb30, 600, 660)), null); // Feb 30 rolls over
+	expect(decodeGroup(pack(feb30, 600, 660))).toBeNull(); // Feb 30 rolls over
 	const month13 = ((2026 - 2000) << 9) | (13 << 5) | 1;
-	assert.equal(decodeGroup(pack(month13, 600, 660)), null); // month 13
+	expect(decodeGroup(pack(month13, 600, 660))).toBeNull(); // month 13
 	const jan1 = ((2026 - 2000) << 9) | (1 << 5) | 1;
-	assert.equal(decodeGroup(pack(jan1, 1500, 1560)), null); // minute 1500 -> hour 25
-	assert.equal(decodeGroup(pack(jan1, 700, 600)), null); // end before start
+	expect(decodeGroup(pack(jan1, 1500, 1560))).toBeNull(); // minute 1500 -> hour 25
+	expect(decodeGroup(pack(jan1, 700, 600))).toBeNull(); // end before start
 });
 
 test('decode rejects a title with a broken utf-8 tail', () => {
 	// marker, target, N=0, zone "UTC", then a lone 0xC3 (incomplete 2-byte sequence)
-	assert.equal(
+	expect(
 		decodeGroup(Buffer.from([2, 0, 40, 0, 3, 85, 84, 67, 0xc3]).toString('base64url')),
-		null,
-	);
+	).toBeNull();
 });
 
 import { parseSession, parseSessions, computeProgress } from '../src/lib.js';
 
 test('parseSession validates and computes wall-clock duration', () => {
 	const s = parseSession({ date: '2026-06-18', start: '19:00', end: '22:30' });
-	assert.ok(s);
-	assert.equal(s.hours, 3.5);
-	assert.equal(s.date, '2026-06-18');
-	assert.equal(s.start, '19:00');
-	assert.equal(s.end, '22:30');
-	assert.ok(!('startDT' in s));
+	expect(s?.hours).toBe(3.5);
+	expect(s?.date).toBe('2026-06-18');
+	expect(s?.start).toBe('19:00');
+	expect(s?.end).toBe('22:30');
+	expect(s && 'startDT' in s).toBe(false);
 });
 
 test('parseSessions hydrates instants and civil date in the group zone', () => {
@@ -163,35 +155,34 @@ test('parseSessions hydrates instants and civil date in the group zone', () => {
 		[{ date: '2026-06-18', start: '19:00', end: '22:30' }],
 		'Europe/Moscow',
 	);
-	assert.equal(s.startMs, Date.UTC(2026, 5, 18, 16, 0));
-	assert.equal(s.endMs, Date.UTC(2026, 5, 18, 19, 30));
-	assert.deepEqual(s.civilDate, new Date(2026, 5, 18));
+	expect(s.startMs).toBe(Date.UTC(2026, 5, 18, 16, 0));
+	expect(s.endMs).toBe(Date.UTC(2026, 5, 18, 19, 30));
+	expect(s.civilDate).toEqual(new Date(2026, 5, 18));
 });
 
 test('parseSession rejects end <= start and garbage', () => {
-	assert.equal(parseSession({ date: '2026-06-18', start: '19:00', end: '19:00' }), null);
-	assert.equal(parseSession({ date: '2026-06-18', start: '19:00', end: '18:00' }), null);
-	assert.equal(parseSession({ date: 'nonsense', start: '19:00', end: '20:00' }), null);
-	assert.equal(parseSession({ date: '', start: '', end: '' }), null);
+	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '19:00' })).toBeNull();
+	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '18:00' })).toBeNull();
+	expect(parseSession({ date: 'nonsense', start: '19:00', end: '20:00' })).toBeNull();
+	expect(parseSession({ date: '', start: '', end: '' })).toBeNull();
 });
 
 test('parseSession rejects calendar dates that would silently roll over', () => {
-	assert.equal(parseSession({ date: '2026-02-30', start: '10:00', end: '11:00' }), null); // Feb 30
-	assert.equal(parseSession({ date: '2026-02-29', start: '10:00', end: '11:00' }), null); // 2026 is not a leap year
-	assert.equal(parseSession({ date: '2026-04-31', start: '10:00', end: '11:00' }), null); // April has 30 days
+	expect(parseSession({ date: '2026-02-30', start: '10:00', end: '11:00' })).toBeNull(); // Feb 30
+	expect(parseSession({ date: '2026-02-29', start: '10:00', end: '11:00' })).toBeNull(); // 2026 is not a leap year
+	expect(parseSession({ date: '2026-04-31', start: '10:00', end: '11:00' })).toBeNull(); // April has 30 days
 });
 
 test('parseSession accepts a genuine leap day', () => {
 	const s = parseSession({ date: '2028-02-29', start: '10:00', end: '11:00' });
-	assert.ok(s);
-	assert.equal(s.date, '2028-02-29');
+	expect(s?.date).toBe('2028-02-29');
 });
 
 test('parseSession rejects dates outside the encodable 2000-2099 century', () => {
-	assert.equal(parseSession({ date: '1999-12-31', start: '10:00', end: '11:00' }), null);
-	assert.equal(parseSession({ date: '2100-01-01', start: '10:00', end: '11:00' }), null);
-	assert.ok(parseSession({ date: '2000-01-01', start: '10:00', end: '11:00' })); // boundary
-	assert.ok(parseSession({ date: '2099-12-31', start: '10:00', end: '11:00' })); // boundary
+	expect(parseSession({ date: '1999-12-31', start: '10:00', end: '11:00' })).toBeNull();
+	expect(parseSession({ date: '2100-01-01', start: '10:00', end: '11:00' })).toBeNull();
+	expect(parseSession({ date: '2000-01-01', start: '10:00', end: '11:00' })).toBeTruthy(); // boundary
+	expect(parseSession({ date: '2099-12-31', start: '10:00', end: '11:00' })).toBeTruthy(); // boundary
 });
 
 test('parseSession measures wall-clock hours, unaffected by a DST transition', () => {
@@ -199,8 +190,7 @@ test('parseSession measures wall-clock hours, unaffected by a DST transition', (
 	// the clock even though only 1 real UTC hour elapses. (Run under a DST-observing
 	// TZ, e.g. TZ=Europe/Berlin, to exercise the transition.)
 	const s = parseSession({ date: '2026-03-29', start: '01:30', end: '03:30' });
-	assert.ok(s);
-	assert.equal(s.hours, 2);
+	expect(s?.hours).toBe(2);
 });
 
 test('parseSessions drops invalid entries and sorts chronologically', () => {
@@ -212,9 +202,9 @@ test('parseSessions drops invalid entries and sorts chronologically', () => {
 		],
 		'UTC',
 	);
-	assert.equal(sessions.length, 2);
-	assert.equal(sessions[0].date, '2026-01-05');
-	assert.equal(sessions[1].date, '2026-01-20');
+	expect(sessions.length).toBe(2);
+	expect(sessions[0].date).toBe('2026-01-05');
+	expect(sessions[1].date).toBe('2026-01-20');
 });
 
 const fixture = parseSessions(
@@ -228,70 +218,68 @@ const fixture = parseSessions(
 
 test('computeProgress counts only ended sessions', () => {
 	const p = computeProgress(fixture, 10, Date.UTC(2026, 0, 10));
-	assert.equal(p.completedHours, 7);
-	assert.equal(p.remainingHours, 3);
-	assert.equal(p.percent, 70);
+	expect(p.completedHours).toBe(7);
+	expect(p.remainingHours).toBe(3);
+	expect(p.percent).toBe(70);
 });
 
 test('computeProgress overshoot: percent caps, real hours shown, remaining clamps', () => {
 	const p = computeProgress(fixture, 10, Date.UTC(2026, 1, 1));
-	assert.equal(p.completedHours, 12);
-	assert.equal(p.remainingHours, 0);
-	assert.equal(p.percent, 100);
+	expect(p.completedHours).toBe(12);
+	expect(p.remainingHours).toBe(0);
+	expect(p.percent).toBe(100);
 });
 
 test('computeProgress with zero target yields zero percent', () => {
-	assert.equal(computeProgress(fixture, 0, Date.UTC(2026, 1, 1)).percent, 0);
+	expect(computeProgress(fixture, 0, Date.UTC(2026, 1, 1)).percent).toBe(0);
 });
 
 import { progressSegments } from '../src/lib.js';
 
 test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
-	assert.equal(computeProgress(fixture, 10, Date.UTC(2026, 0, 10)).upcomingHours, 5);
-	assert.equal(computeProgress(fixture, 10, Date.UTC(2026, 1, 1)).upcomingHours, 0);
+	expect(computeProgress(fixture, 10, Date.UTC(2026, 0, 10)).upcomingHours).toBe(5);
+	expect(computeProgress(fixture, 10, Date.UTC(2026, 1, 1)).upcomingHours).toBe(0);
 });
 
 test('progressSegments splits done / upcoming / unplanned against the target', () => {
-	assert.deepEqual(progressSegments(7, 0, 10), { donePct: 70, upcomingPct: 0 });
-	assert.deepEqual(progressSegments(4, 3, 10), { donePct: 40, upcomingPct: 30 });
+	expect(progressSegments(7, 0, 10)).toEqual({ donePct: 70, upcomingPct: 0 });
+	expect(progressSegments(4, 3, 10)).toEqual({ donePct: 40, upcomingPct: 30 });
 });
 
 test('progressSegments clamps overshoot so the bar never exceeds 100%', () => {
-	assert.deepEqual(progressSegments(12, 0, 10), { donePct: 100, upcomingPct: 0 });
-	assert.deepEqual(progressSegments(7, 6, 10), { donePct: 70, upcomingPct: 30 });
+	expect(progressSegments(12, 0, 10)).toEqual({ donePct: 100, upcomingPct: 0 });
+	expect(progressSegments(7, 6, 10)).toEqual({ donePct: 70, upcomingPct: 30 });
 });
 
 test('progressSegments is all zero with no target', () => {
-	assert.deepEqual(progressSegments(5, 5, 0), { donePct: 0, upcomingPct: 0 });
+	expect(progressSegments(5, 5, 0)).toEqual({ donePct: 0, upcomingPct: 0 });
 });
 
 import { findNextSession } from '../src/lib.js';
 
 test('findNextSession picks the earliest not-yet-ended session', () => {
 	const next = findNextSession(fixture, Date.UTC(2026, 0, 6));
-	assert.ok(next);
-	assert.equal(next.session.date, '2026-01-07');
-	assert.equal(next.inProgress, false);
+	expect(next?.session.date).toBe('2026-01-07');
+	expect(next?.inProgress).toBe(false);
 });
 
 test('findNextSession flags a session running right now', () => {
 	const next = findNextSession(fixture, Date.UTC(2026, 0, 20, 11, 0));
-	assert.ok(next);
-	assert.equal(next.session.date, '2026-01-20');
-	assert.equal(next.inProgress, true);
+	expect(next?.session.date).toBe('2026-01-20');
+	expect(next?.inProgress).toBe(true);
 });
 
 test('findNextSession returns null when everything ended or list is empty', () => {
-	assert.equal(findNextSession(fixture, Date.UTC(2026, 1, 1)), null);
-	assert.equal(findNextSession([], Date.UTC(2026, 0, 1)), null);
+	expect(findNextSession(fixture, Date.UTC(2026, 1, 1))).toBeNull();
+	expect(findNextSession([], Date.UTC(2026, 0, 1))).toBeNull();
 });
 
 import { weekStartOf, weeklyBuckets } from '../src/lib.js';
 
 test('weekStartOf snaps to Monday', () => {
-	assert.deepEqual(weekStartOf(new Date(2026, 5, 18)), new Date(2026, 5, 15)); // Thu -> Mon
-	assert.deepEqual(weekStartOf(new Date(2026, 5, 21)), new Date(2026, 5, 15)); // Sun -> Mon
-	assert.deepEqual(weekStartOf(new Date(2026, 5, 15)), new Date(2026, 5, 15)); // Mon stays
+	expect(weekStartOf(new Date(2026, 5, 18))).toEqual(new Date(2026, 5, 15)); // Thu -> Mon
+	expect(weekStartOf(new Date(2026, 5, 21))).toEqual(new Date(2026, 5, 15)); // Sun -> Mon
+	expect(weekStartOf(new Date(2026, 5, 15))).toEqual(new Date(2026, 5, 15)); // Mon stays
 });
 
 test('weeklyBuckets spans first..last week, keeps empty weeks, splits by now', () => {
@@ -303,18 +291,15 @@ test('weeklyBuckets spans first..last week, keeps empty weeks, splits by now', (
 		'UTC',
 	);
 	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 10, 12, 0)); // Wed, week of Jun 8
-	assert.equal(buckets.length, 3);
-	assert.deepEqual(
-		buckets.map((b) => [b.doneHours, b.upcomingHours]),
-		[
-			[3, 0],
-			[0, 0],
-			[0, 4],
-		],
-	);
-	assert.deepEqual(buckets[0].weekStart, new Date(2026, 5, 1));
-	assert.deepEqual(buckets[1].weekStart, new Date(2026, 5, 8));
-	assert.deepEqual(buckets[2].weekStart, new Date(2026, 5, 15));
+	expect(buckets.length).toBe(3);
+	expect(buckets.map((b) => [b.doneHours, b.upcomingHours])).toEqual([
+		[3, 0],
+		[0, 0],
+		[0, 4],
+	]);
+	expect(buckets[0].weekStart).toEqual(new Date(2026, 5, 1));
+	expect(buckets[1].weekStart).toEqual(new Date(2026, 5, 8));
+	expect(buckets[2].weekStart).toEqual(new Date(2026, 5, 15));
 });
 
 test('weeklyBuckets splits a week that straddles now into both segments', () => {
@@ -326,19 +311,19 @@ test('weeklyBuckets splits a week that straddles now into both segments', () => 
 		'UTC',
 	);
 	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 10, 12, 0)); // Wed same week
-	assert.equal(buckets.length, 1);
-	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [2, 3]);
+	expect(buckets.length).toBe(1);
+	expect([buckets[0].doneHours, buckets[0].upcomingHours]).toEqual([2, 3]);
 });
 
 test('weeklyBuckets counts a session ending in the future as upcoming even in the current week', () => {
 	// the exact shape of the reported bug: today Tue, session Thu same week
 	const sessions = parseSessions([{ date: '2026-07-23', start: '12:00', end: '15:00' }], 'UTC');
 	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 6, 21, 12, 0)); // Tue 21 Jul
-	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [0, 3]);
+	expect([buckets[0].doneHours, buckets[0].upcomingHours]).toEqual([0, 3]);
 });
 
 test('weeklyBuckets of nothing is empty', () => {
-	assert.deepEqual(weeklyBuckets([], Date.now()), []);
+	expect(weeklyBuckets([], Date.now())).toEqual([]);
 });
 
 test('weeklyBuckets keys weeks by the group-zone civil date, not the viewer', () => {
@@ -349,9 +334,9 @@ test('weeklyBuckets keys weeks by the group-zone civil date, not the viewer', ()
 		'Europe/Moscow',
 	);
 	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 1)); // before it -> upcoming
-	assert.equal(buckets.length, 1);
-	assert.deepEqual(buckets[0].weekStart, new Date(2026, 5, 8)); // Mon of the week of Sun Jun 14
-	assert.deepEqual([buckets[0].doneHours, buckets[0].upcomingHours], [0, 2]);
+	expect(buckets.length).toBe(1);
+	expect(buckets[0].weekStart).toEqual(new Date(2026, 5, 8)); // Mon of the week of Sun Jun 14
+	expect([buckets[0].doneHours, buckets[0].upcomingHours]).toEqual([0, 2]);
 });
 
 import { nowWeekIndex } from '../src/lib.js';
@@ -367,10 +352,10 @@ test('nowWeekIndex finds the bucket that contains now, else null', () => {
 		),
 		Date.UTC(2026, 5, 10, 12, 0),
 	); // weeks of Jun 1, Jun 8, Jun 15
-	assert.equal(nowWeekIndex(buckets, new Date(2026, 5, 10)), 1);
-	assert.equal(nowWeekIndex(buckets, new Date(2026, 4, 1)), null);
-	assert.equal(nowWeekIndex(buckets, new Date(2026, 7, 1)), null);
-	assert.equal(nowWeekIndex([], new Date(2026, 5, 10)), null);
+	expect(nowWeekIndex(buckets, new Date(2026, 5, 10))).toBe(1);
+	expect(nowWeekIndex(buckets, new Date(2026, 4, 1))).toBeNull();
+	expect(nowWeekIndex(buckets, new Date(2026, 7, 1))).toBeNull();
+	expect(nowWeekIndex([], new Date(2026, 5, 10))).toBeNull();
 });
 
 import {
@@ -383,86 +368,84 @@ import {
 
 test('dates render spelled out, never numeric-ambiguous', () => {
 	const thu = new Date(2026, 5, 18);
-	assert.equal(formatDateShort(thu, 'en'), 'Thu 18 Jun');
-	assert.equal(formatDateShort(thu, 'ru'), 'чт, 18 июн.');
+	expect(formatDateShort(thu, 'en')).toBe('Thu 18 Jun');
+	expect(formatDateShort(thu, 'ru')).toBe('чт, 18 июн.');
 	const jul = new Date(2026, 6, 23);
-	assert.equal(formatDateLong(jul, 'en'), 'Thursday 23 July');
-	assert.equal(formatDateLong(jul, 'ru'), 'четверг, 23 июля');
-	assert.equal(formatMonth(thu, 'en'), 'Jun');
+	expect(formatDateLong(jul, 'en')).toBe('Thursday 23 July');
+	expect(formatDateLong(jul, 'ru')).toBe('четверг, 23 июля');
+	expect(formatMonth(thu, 'en')).toBe('Jun');
 });
 
 test('week ranges span monday to sunday, localised', () => {
-	assert.equal(formatWeekRange(new Date(2026, 7, 17), 'en'), '17 – 23 Aug');
-	assert.equal(formatWeekRange(new Date(2026, 7, 17), 'ru'), '17–23 авг.');
+	expect(formatWeekRange(new Date(2026, 7, 17), 'en')).toBe('17 – 23 Aug');
+	expect(formatWeekRange(new Date(2026, 7, 17), 'ru')).toBe('17–23 авг.');
 	// a week crossing a month boundary names both months
-	assert.equal(formatWeekRange(new Date(2026, 5, 29), 'en'), '29 Jun – 5 Jul');
-	assert.equal(formatWeekRange(new Date(2026, 5, 29), 'ru'), '29 июн. – 5 июл.');
+	expect(formatWeekRange(new Date(2026, 5, 29), 'en')).toBe('29 Jun – 5 Jul');
+	expect(formatWeekRange(new Date(2026, 5, 29), 'ru')).toBe('29 июн. – 5 июл.');
 });
 
 test('hours localise decimal separators', () => {
-	assert.equal(formatHoursNum(28.5, 'en'), '28.5');
-	assert.equal(formatHoursNum(28.5, 'ru'), '28,5');
-	assert.equal(formatHoursNum(4, 'en'), '4');
+	expect(formatHoursNum(28.5, 'en')).toBe('28.5');
+	expect(formatHoursNum(28.5, 'ru')).toBe('28,5');
+	expect(formatHoursNum(4, 'en')).toBe('4');
 });
 
 test('formatted hours use a plain space, not NBSP, as the ru group separator', () => {
 	const out = formatHoursNum(1200, 'ru');
-	assert.equal(out, '1 200');
-	assert.doesNotMatch(out, /[\u00a0\u202f]/); // no NBSP / narrow NBSP the engines disagree on
+	expect(out).toBe('1 200');
+	expect(out).not.toMatch(/[\u00a0\u202f]/); // no NBSP / narrow NBSP the engines disagree on
 });
 
 import { zonedToInstant, zonedCivilDate, formatOffsetTag, formatLocalTime } from '../src/lib.js';
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
 	// asserted against Date.UTC(...), so these hold under any host TZ
-	assert.equal(
-		zonedToInstant({ y: 2026, mo: 6, d: 18, h: 19, mi: 0 }, 'Europe/Moscow'),
-		Date.UTC(2026, 5, 18, 16, 0), // Moscow is UTC+3, no DST
+	// Moscow is UTC+3, no DST
+	expect(zonedToInstant({ y: 2026, mo: 6, d: 18, h: 19, mi: 0 }, 'Europe/Moscow')).toBe(
+		Date.UTC(2026, 5, 18, 16, 0),
 	);
-	assert.equal(
-		zonedToInstant({ y: 2026, mo: 1, d: 15, h: 9, mi: 0 }, 'America/New_York'),
-		Date.UTC(2026, 0, 15, 14, 0), // EST, UTC-5
+	// EST, UTC-5
+	expect(zonedToInstant({ y: 2026, mo: 1, d: 15, h: 9, mi: 0 }, 'America/New_York')).toBe(
+		Date.UTC(2026, 0, 15, 14, 0),
 	);
-	assert.equal(
-		zonedToInstant({ y: 2026, mo: 7, d: 15, h: 9, mi: 0 }, 'America/New_York'),
-		Date.UTC(2026, 6, 15, 13, 0), // EDT, UTC-4
+	// EDT, UTC-4
+	expect(zonedToInstant({ y: 2026, mo: 7, d: 15, h: 9, mi: 0 }, 'America/New_York')).toBe(
+		Date.UTC(2026, 6, 15, 13, 0),
 	);
 });
 
 test('zonedToInstant is correct on both sides of a DST transition', () => {
 	// Europe/London springs forward 2026-03-29 01:00 GMT -> 02:00 BST
-	assert.equal(
-		zonedToInstant({ y: 2026, mo: 3, d: 29, h: 0, mi: 30 }, 'Europe/London'),
-		Date.UTC(2026, 2, 29, 0, 30), // still GMT (UTC+0)
+	// still GMT (UTC+0)
+	expect(zonedToInstant({ y: 2026, mo: 3, d: 29, h: 0, mi: 30 }, 'Europe/London')).toBe(
+		Date.UTC(2026, 2, 29, 0, 30),
 	);
-	assert.equal(
-		zonedToInstant({ y: 2026, mo: 3, d: 29, h: 3, mi: 0 }, 'Europe/London'),
-		Date.UTC(2026, 2, 29, 2, 0), // now BST (UTC+1)
+	// now BST (UTC+1)
+	expect(zonedToInstant({ y: 2026, mo: 3, d: 29, h: 3, mi: 0 }, 'Europe/London')).toBe(
+		Date.UTC(2026, 2, 29, 2, 0),
 	);
 });
 
 test('zonedCivilDate expresses an instant as the group-zone civil date', () => {
 	// 20:00 UTC on Jun 14 is 23:00 Moscow (same day)
-	assert.deepEqual(
-		zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 20, 0)), 'Europe/Moscow'),
+	expect(zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 20, 0)), 'Europe/Moscow')).toEqual(
 		new Date(2026, 5, 14),
 	);
 	// 22:00 UTC on Jun 14 is 01:00 Moscow the next day
-	assert.deepEqual(
-		zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 22, 0)), 'Europe/Moscow'),
+	expect(zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 22, 0)), 'Europe/Moscow')).toEqual(
 		new Date(2026, 5, 15),
 	);
 });
 
 test('formatOffsetTag renders the zone offset', () => {
-	assert.equal(formatOffsetTag(Date.UTC(2026, 5, 18, 16, 0), 'Europe/Moscow', 'en'), 'GMT+3');
-	assert.equal(formatOffsetTag(Date.UTC(2026, 0, 15, 14, 0), 'America/New_York', 'en'), 'GMT-5');
+	expect(formatOffsetTag(Date.UTC(2026, 5, 18, 16, 0), 'Europe/Moscow', 'en')).toBe('GMT+3');
+	expect(formatOffsetTag(Date.UTC(2026, 0, 15, 14, 0), 'America/New_York', 'en')).toBe('GMT-5');
 });
 
 test('formatLocalTime renders HH:MM', () => {
-	// value is viewer-local (host-dependent); assert only the shape here \u2014 the
+	// value is viewer-local (host-dependent); assert only the shape here — the
 	// localised value is asserted in e2e where the browser timezone is pinned
-	assert.match(formatLocalTime(Date.UTC(2026, 5, 18, 16, 0), 'en'), /^\d{2}:\d{2}$/);
+	expect(formatLocalTime(Date.UTC(2026, 5, 18, 16, 0), 'en')).toMatch(/^\d{2}:\d{2}$/);
 });
 
 import { viewerMatchesZone } from '../src/lib.js';
@@ -470,8 +453,8 @@ import { viewerMatchesZone } from '../src/lib.js';
 test('viewerMatchesZone compares the viewer offset to the group offset', () => {
 	const ms = Date.UTC(2026, 5, 18, 16, 0);
 	// UTC+14 and UTC-12 have different offsets, so the host (whatever its zone)
-	// cannot match both \u2014 host-independent, and it exercises the comparison.
-	assert.ok(!(viewerMatchesZone(ms, 'Etc/GMT-14') && viewerMatchesZone(ms, 'Etc/GMT+12')));
+	// cannot match both — host-independent, and it exercises the comparison.
+	expect(viewerMatchesZone(ms, 'Etc/GMT-14') && viewerMatchesZone(ms, 'Etc/GMT+12')).toBe(false);
 });
 
 import { isBlankInput, isComplete, shareableGroup } from '../src/lib.js';
@@ -484,19 +467,18 @@ const draft = {
 };
 
 test('isBlankInput is true only when every field is empty', () => {
-	assert.equal(isBlankInput({ date: '', start: '', end: '' }), true);
-	assert.equal(isBlankInput({ date: '2026-01-05', start: '', end: '' }), false);
+	expect(isBlankInput({ date: '', start: '', end: '' })).toBe(true);
+	expect(isBlankInput({ date: '2026-01-05', start: '', end: '' })).toBe(false);
 });
 
 test('isComplete needs a title, a positive target and at least one valid session', () => {
-	assert.equal(isComplete(draft), true);
-	assert.equal(isComplete({ ...draft, title: '  ' }), false);
-	assert.equal(isComplete({ ...draft, targetHours: 0 }), false);
-	assert.equal(isComplete({ ...draft, sessions: [] }), false);
-	assert.equal(
+	expect(isComplete(draft)).toBe(true);
+	expect(isComplete({ ...draft, title: '  ' })).toBe(false);
+	expect(isComplete({ ...draft, targetHours: 0 })).toBe(false);
+	expect(isComplete({ ...draft, sessions: [] })).toBe(false);
+	expect(
 		isComplete({ ...draft, sessions: [{ date: '2026-01-05', start: '13:00', end: '10:00' }] }),
-		false,
-	);
+	).toBe(false);
 });
 
 test('shareableGroup drops blank rows and returns the cleaned group when complete', () => {
@@ -505,9 +487,8 @@ test('shareableGroup drops blank rows and returns the cleaned group when complet
 		sessions: [...draft.sessions, { date: '', start: '', end: '' }],
 	};
 	const out = shareableGroup(withBlank);
-	assert.ok(out);
-	assert.equal(out.sessions.length, 1);
-	assert.equal(out.timeZone, 'UTC');
+	expect(out?.sessions.length).toBe(1);
+	expect(out?.timeZone).toBe('UTC');
 });
 
 test('shareableGroup returns null when a non-blank row is invalid', () => {
@@ -515,9 +496,9 @@ test('shareableGroup returns null when a non-blank row is invalid', () => {
 		...draft,
 		sessions: [...draft.sessions, { date: '2026-02-01', start: '13:00', end: '10:00' }],
 	};
-	assert.equal(shareableGroup(bad), null);
+	expect(shareableGroup(bad)).toBeNull();
 });
 
 test('shareableGroup returns null when the group is incomplete', () => {
-	assert.equal(shareableGroup({ ...draft, title: '' }), null);
+	expect(shareableGroup({ ...draft, title: '' })).toBeNull();
 });

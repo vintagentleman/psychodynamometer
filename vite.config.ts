@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
 
@@ -9,4 +9,5 @@ export default defineConfig({
 		lightningcss: { targets: browserslistToTargets(browserslist()) },
 	},
 	build: { cssMinify: 'lightningcss' },
+	test: { environment: 'node' },
 });
