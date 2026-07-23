@@ -69,7 +69,14 @@ export function computeProgress(
 	sessions: Session[],
 	targetHours: number,
 	nowMs: number,
-): { completedHours: number; upcomingHours: number; remainingHours: number; percent: number } {
+): {
+	completedHours: number;
+	upcomingHours: number;
+	remainingHours: number;
+	percent: number;
+	plannedHours: number;
+	scheduleDelta: number;
+} {
 	const completedHours = sessions
 		.filter((session) => session.endMs <= nowMs)
 		.reduce((sum, session) => sum + session.hours, 0);
@@ -78,7 +85,9 @@ export function computeProgress(
 		.reduce((sum, session) => sum + session.hours, 0);
 	const remainingHours = Math.max(0, targetHours - completedHours);
 	const percent = targetHours > 0 ? Math.min(100, (completedHours / targetHours) * 100) : 0;
-	return { completedHours, upcomingHours, remainingHours, percent };
+	const plannedHours = completedHours + upcomingHours;
+	const scheduleDelta = targetHours - plannedHours;
+	return { completedHours, upcomingHours, remainingHours, percent, plannedHours, scheduleDelta };
 }
 
 // Done and upcoming widths as a % of target, clamped so the two never exceed

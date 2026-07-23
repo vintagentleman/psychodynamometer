@@ -112,6 +112,17 @@ test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
 	expect(computeProgress(fixture, 10, Date.UTC(2026, 1, 1)).upcomingHours).toBe(0);
 });
 
+test('computeProgress reports planned hours and the signed schedule delta', () => {
+	// fixture is 12 h planned (3 + 4 + 5)
+	const over = computeProgress(fixture, 10, Date.UTC(2026, 0, 10)); // 12 vs 10 -> over-fill
+	expect(over.plannedHours).toBe(12);
+	expect(over.scheduleDelta).toBe(-2);
+	const under = computeProgress(fixture, 15, Date.UTC(2026, 0, 10)); // 12 vs 15 -> under-fill
+	expect(under.plannedHours).toBe(12);
+	expect(under.scheduleDelta).toBe(3);
+	expect(computeProgress(fixture, 12, Date.UTC(2026, 0, 10)).scheduleDelta).toBe(0); // exact
+});
+
 test('progressSegments splits done / upcoming / unplanned against the target', () => {
 	expect(progressSegments(7, 0, 10)).toEqual({ donePct: 70, upcomingPct: 0 });
 	expect(progressSegments(4, 3, 10)).toEqual({ donePct: 40, upcomingPct: 30 });
