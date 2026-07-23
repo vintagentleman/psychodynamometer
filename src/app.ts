@@ -6,7 +6,7 @@ import { readForm } from './app/form.ts';
 import { refreshComputed, refreshTopbar, renderPage } from './app/render.ts';
 import { app, locale, setLocale, setState, state, storeLang } from './app/store.ts';
 import { applyTheme, pinnedTheme, pinScheme } from './app/theme.ts';
-import { decodeGroup, isBlankInput } from './lib.ts';
+import { decodeGroup, isBlankInput, sortSessionInputs } from './lib.ts';
 
 document.documentElement.lang = locale;
 
@@ -59,7 +59,10 @@ function wireApp() {
 			const draft = readForm();
 			setState({
 				mode: 'view',
-				data: { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) },
+				data: {
+					...draft,
+					sessions: sortSessionInputs(draft.sessions.filter((s) => !isBlankInput(s))),
+				},
 				badLink: false,
 			});
 			renderPage();
