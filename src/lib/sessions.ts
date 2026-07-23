@@ -17,8 +17,7 @@ export type WeekBucket = { weekStart: Date; doneHours: number; upcomingHours: nu
 
 const byStart = (a: Session, b: Session) => a.startMs - b.startMs;
 
-// Validate raw input and compute its wall-clock duration. Zone-independent:
-// calendar/time validity does not depend on the group's timezone.
+// Zone-independent: calendar/time validity does not depend on the group's timezone.
 export function parseSession(
 	input: SessionInput,
 ): { date: string; start: string; end: string; hours: number } | null {
@@ -45,8 +44,6 @@ export function parseSession(
 	return { date: input.date, start: input.start, end: input.end, hours };
 }
 
-// Validate, hydrate into the group zone (instants + civil date), and sort.
-// Invalid inputs are dropped.
 export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
 	const sessions: Session[] = [];
 	for (const input of inputs) {
@@ -65,11 +62,8 @@ export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
 	return sessions.sort(byStart);
 }
 
-// Chronological order for raw session inputs — the order the view renders them
-// in. ISO YYYY-MM-DD dates and 24h HH:MM times compare chronologically as plain
-// strings, so this needs no timezone and never throws on malformed or partial
-// rows. Returns a new array; the native stable sort keeps equal-key rows in
-// input order. Validates and drops nothing.
+// ISO YYYY-MM-DD dates and 24h HH:MM times compare chronologically as plain
+// strings, so this needs no timezone and is safe on malformed or partial rows.
 export function sortSessionInputs(sessions: SessionInput[]): SessionInput[] {
 	const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 	return [...sessions].sort(
@@ -102,8 +96,7 @@ export function computeProgress(
 	return { completedHours, upcomingHours, remainingHours, percent, plannedHours, scheduleDelta };
 }
 
-// Done and upcoming widths as a % of target, clamped so the two never exceed
-// 100% (overshoot is absorbed).
+// Clamped so the stacked done + upcoming widths never exceed 100%.
 export function progressSegments(
 	completedHours: number,
 	upcomingHours: number,
@@ -115,11 +108,8 @@ export function progressSegments(
 	return { donePct, upcomingPct };
 }
 
-// Running progress after each session, as a percentage of target: the
-// cumulative sum of session hours in the order given (pass a date-sorted
-// parseSessions result), divided by target. Aligned index-for-index with the
-// input. NOT clamped — an over-filled plan reads past 100% in its tail. Empty
-// input or a non-positive target yields an empty array.
+// Cumulative % of target after each session; pass a date-sorted list. NOT
+// clamped, unlike progressSegments — an over-filled plan reads past 100%.
 export function cumulativePercents(sessions: Session[], targetHours: number): number[] {
 	if (targetHours <= 0) return [];
 	let running = 0;
@@ -129,8 +119,7 @@ export function cumulativePercents(sessions: Session[], targetHours: number): nu
 	});
 }
 
-// Earliest session that has not ended. A session running right now counts,
-// flagged inProgress.
+// The in-progress session (started, not yet ended) counts as next, flagged inProgress.
 export function findNextSession(
 	sessions: Session[],
 	nowMs: number,
@@ -148,11 +137,8 @@ export function weekStartOf(date: Date): Date {
 	return monday;
 }
 
-// One bucket per calendar week from the first session's week through the last's
-// — weeks without sessions stay in, with zero hours (visible gaps). Hours split
-// by session end vs `nowMs`, so a week straddling today carries both a done and
-// an upcoming share. Week membership is keyed to the group-zone civil date, so
-// the bucketing is identical for every viewer.
+// Empty weeks stay in as zero-hour buckets (visible gaps). Week membership is
+// keyed to the group-zone civil date, so the bucketing is identical for every viewer.
 export function weeklyBuckets(sessions: Session[], nowMs: number): WeekBucket[] {
 	if (sessions.length === 0) return [];
 	const sorted = [...sessions].sort(byStart);
@@ -173,8 +159,6 @@ export function weeklyBuckets(sessions: Session[], nowMs: number): WeekBucket[] 
 	return buckets;
 }
 
-// Index of the bucket whose [weekStart, weekStart+7) contains the group-zone
-// civil date of now, or null when now is outside the rendered span.
 export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | null {
 	for (let i = 0; i < buckets.length; i++) {
 		const weekEnd = new Date(buckets[i].weekStart);
@@ -186,15 +170,11 @@ export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | nu
 
 export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';
 
-// Title and target are both optional (an untitled, zero-target group renders
-// and shares fine — a 0 target just means "no total to measure against"); a
-// shareable group needs only at least one valid session.
+// Title and target are both optional — a shareable group needs only one valid session.
 export function isComplete(draft: GroupData) {
 	return parseSessions(draft.sessions, draft.timeZone).length > 0;
 }
 
-// The draft as a shareable group, or null if any non-blank row is invalid or
-// there are no valid sessions — exactly what would produce a valid link.
 export function shareableGroup(draft: GroupData): GroupData | null {
 	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
 	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };

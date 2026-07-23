@@ -7,10 +7,9 @@ const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-// Encode group data as a compact base64url URL-fragment token. The payload is a
-// binary blob — format marker, target in half-hours, session count, zone length
-// + IANA zone name, one 5-byte record per session (packed date + start/end
-// minute-of-day), then the UTF-8 title — carrying no readable structure.
+// Binary layout: format marker, target (half-hours), session count, zone
+// length + IANA zone, one 5-byte record per session (packed date + start/end
+// minute-of-day), then the UTF-8 title.
 export function encodeGroup(data: GroupData): string {
 	const title = utf8Encoder.encode(data.title);
 	const zone = utf8Encoder.encode(data.timeZone);

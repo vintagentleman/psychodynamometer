@@ -5,10 +5,8 @@ import { markRow, readForm, readRow, showBuildError } from './form.ts';
 import { refreshComputed } from './render.ts';
 import { app, locale, state } from './store.ts';
 
-// Write the persisted state into the address bar: a shareable draft becomes a
-// #d= link, anything else clears the hash. Uses replaceState, not
-// `location.hash` — assigning the hash fires hashchange → route(), a redundant
-// re-decode and re-render of the view we build ourselves.
+// replaceState, not `location.hash` — assigning the hash fires hashchange →
+// route(), redundantly re-decoding and re-rendering the view we already built.
 export function syncUrl() {
 	const group = shareableGroup(readForm());
 	history.replaceState(
@@ -18,7 +16,6 @@ export function syncUrl() {
 	);
 }
 
-// Copy the current group's share link to the clipboard.
 export function copyLink(copyButton: HTMLButtonElement) {
 	let cleaned: GroupData;
 	if (state.mode === 'view') {

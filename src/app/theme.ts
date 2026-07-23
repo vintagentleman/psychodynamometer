@@ -10,15 +10,14 @@ export function pinnedTheme(): 'light' | 'dark' | null {
 	}
 }
 
-// The scheme the pin segment represents: the pinned one, or — when following
-// the system — the opposite of the current system scheme.
+// What the pin toggle switches to: the pinned scheme, or the opposite of the
+// system scheme when following it.
 export function pinScheme(): 'light' | 'dark' {
 	return pinnedTheme() ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
 }
 
-// Apply a pinned scheme (or null for system): toggle the root class and keep the
-// `color-scheme` meta in sync (pre-paint canvas), then persist. CSS themes the
-// rest; system mode carries no class and follows the OS via `@media`.
+// null follows the system: no class, themed via `@media`. The `color-scheme`
+// meta keeps the pre-paint canvas right.
 export function applyTheme(theme: 'light' | 'dark' | null) {
 	const root = document.documentElement;
 	root.classList.toggle('theme-light', theme === 'light');

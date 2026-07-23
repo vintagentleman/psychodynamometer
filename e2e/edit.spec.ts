@@ -165,11 +165,9 @@ test.describe('editing a loaded group', () => {
 	test('sorts session rows chronologically on Done', async ({ page }) => {
 		await page.goto('/');
 		await page.fill('input[name="targetHours"]', '10');
-		// First row: a later date.
 		await page.fill('#rows .row:nth-child(1) input[name="date"]', '2026-02-10');
 		await page.fill('#rows .row:nth-child(1) input[name="start"]', '10:00');
 		await page.fill('#rows .row:nth-child(1) input[name="end"]', '12:00');
-		// Second row: an earlier date, entered out of order.
 		await page.click('#add-row');
 		await page.fill('#rows .row:nth-child(2) input[name="date"]', '2026-01-05');
 		await page.fill('#rows .row:nth-child(2) input[name="start"]', '10:00');
@@ -177,7 +175,6 @@ test.describe('editing a loaded group', () => {
 		await page.click('#done');
 		await expect(page.locator('.page.editing')).toHaveCount(0);
 		await page.click('#edit');
-		// Re-entering Edit shows the rows in date order — the earlier date first.
 		await expect(page.locator('#rows .row:nth-child(1) input[name="date"]')).toHaveValue(
 			'2026-01-05',
 		);

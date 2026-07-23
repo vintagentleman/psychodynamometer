@@ -15,8 +15,8 @@ function currentPayload(): string | null {
 	return match ? match[1] : null;
 }
 
-// Wire every handler once, on the stable #app root. Each render replaces #app's
-// children but never #app, so this delegation outlives all of them.
+// Handlers are delegated on the stable #app root; render replaces #app's
+// children but never #app, so they outlive every render.
 function wireApp() {
 	app.addEventListener('click', (event) => {
 		const target = event.target as HTMLElement;

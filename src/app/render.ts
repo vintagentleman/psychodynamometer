@@ -48,8 +48,8 @@ function topbarFragment() {
 	return fragment;
 }
 
-// Recompute the derived regions from `data`. Never touches inputs, so it is
-// safe to call on every keystroke — the caret survives.
+// Recomputes derived regions only, never the inputs, so it's safe on every
+// keystroke — the caret survives.
 function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | 'edit') {
 	const zone = data.timeZone;
 	const nowMs = now.getTime();
@@ -179,7 +179,6 @@ function fillScheduleView(
 	list.replaceChildren(ol);
 }
 
-// Build the masthead sub-line — target as text (view) or inline input (edit).
 // The completed figure sits in its own .subline-completed span so the live
 // refresh never rebuilds the target input, keeping its caret.
 function buildSubline(page: Element, targetHours: number, mode: 'view' | 'edit') {
@@ -212,8 +211,7 @@ function buildSubline(page: Element, targetHours: number, mode: 'view' | 'edit')
 	subline.appendChild(zoneSpan);
 }
 
-// Rebuild #app from state: one skeleton, editable regions rendered for the
-// current mode. Handlers live on #app (wired once in wireApp) and survive every
+// Handlers live on #app (wired once in wireApp) and survive every
 // replaceChildren, so nothing here re-attaches anything.
 export function renderPage() {
 	const data: GroupData = state.data ?? {
@@ -296,18 +294,16 @@ export function renderPage() {
 	if (mode === 'edit') markInvalidRows();
 }
 
-// Refresh the live glance (progress/next/rhythm) and row validity from the
-// current form values, without rebuilding the inputs — so the caret survives.
+// Refreshes the live glance from current form values without rebuilding the
+// inputs — so the caret survives.
 export function refreshComputed() {
 	clearBuildError();
 	fillDerived(slot(app, '.page'), readForm(), new Date(), 'edit');
 	markInvalidRows();
 }
 
-// Swap only the live topbar for a freshly-rendered one. A theme change (a click,
-// or the system scheme flipping while in system mode) affects just the topbar
-// controls and the CSS-driven colours, so this avoids rebuilding #app — which
-// would otherwise drop unsaved input in the edit form.
+// Swaps only the topbar (theme/lang change) rather than rebuilding #app, which
+// would drop unsaved input in the edit form.
 export function refreshTopbar() {
 	app.querySelector('.topbar')?.replaceWith(topbarFragment());
 }

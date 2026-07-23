@@ -27,8 +27,7 @@ export function zonedToInstant(
 	return guess - zoneOffsetMs(ms, zone);
 }
 
-// `now` (an instant) as the group-zone civil date at local midnight — the ruler
-// for week bucketing, so "which week is now" is measured in the group's zone.
+// An instant as its civil date at local midnight in the group's zone.
 export function zonedCivilDate(now: Date, zone: string): Date {
 	const parts = new Intl.DateTimeFormat('en-US', {
 		timeZone: zone,
@@ -41,14 +40,12 @@ export function zonedCivilDate(now: Date, zone: string): Date {
 	return new Date(+f.year, +f.month - 1, +f.day);
 }
 
-// True when the viewer's local zone has the same offset as `zone` at instant
-// `ms` — group time and viewer time coincide, so a separate "your time" line
-// adds nothing.
+// True when the viewer's local offset equals `zone`'s at `ms` — then no
+// separate "your time" line is needed.
 export function viewerMatchesZone(ms: number, zone: string): boolean {
 	return zoneOffsetMs(ms, zone) === -new Date(ms).getTimezoneOffset() * 60000;
 }
 
-// The viewer's own IANA zone, for defaulting a fresh group's timezone.
 export function detectedZone(): string {
 	try {
 		return Intl.DateTimeFormat().resolvedOptions().timeZone;
