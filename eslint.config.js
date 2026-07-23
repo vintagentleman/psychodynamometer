@@ -22,6 +22,10 @@ export default [
 		languageOptions: { globals: { ...globals.node, ...globals.browser } },
 	},
 	{
+		files: ['playwright.config.ts'],
+		languageOptions: { globals: { ...globals.node } },
+	},
+	{
 		plugins: { 'simple-import-sort': simpleImportSort },
 		rules: {
 			'simple-import-sort/imports': 'error',

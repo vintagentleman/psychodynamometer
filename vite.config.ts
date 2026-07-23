@@ -9,5 +9,6 @@ export default defineConfig({
 		lightningcss: { targets: browserslistToTargets(browserslist()) },
 	},
 	build: { target: 'baseline-widely-available', cssMinify: 'lightningcss' },
-	test: { environment: 'node' },
+	// Unit tests only; e2e/*.spec.ts is Playwright's, run via `playwright test`.
+	test: { environment: 'node', include: ['test/**/*.test.ts'] },
 });
