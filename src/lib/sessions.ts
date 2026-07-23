@@ -174,12 +174,10 @@ export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | nu
 
 export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';
 
+// The title is optional (an untitled group renders and shares fine); a
+// shareable group needs only a positive target and at least one valid session.
 export function isComplete(draft: GroupData) {
-	return (
-		draft.title.trim() !== '' &&
-		draft.targetHours > 0 &&
-		parseSessions(draft.sessions, draft.timeZone).length > 0
-	);
+	return draft.targetHours > 0 && parseSessions(draft.sessions, draft.timeZone).length > 0;
 }
 
 // The draft as a shareable group, or null if any non-blank row is invalid or a

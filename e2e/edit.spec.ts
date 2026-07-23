@@ -106,6 +106,21 @@ test.describe('copy link', () => {
 		await page.goto(fromView);
 		await expect(page.locator('.masthead h2')).toHaveText('Test Group');
 	});
+
+	test('done writes the url for an untitled group — the title is optional', async ({ page }) => {
+		await page.goto('/');
+		await page.fill('input[name="targetHours"]', '10');
+		await page.fill('input[name="date"]', '2026-01-05');
+		await page.fill('input[name="start"]', '10:00');
+		await page.fill('input[name="end"]', '13:00');
+		await page.click('#done');
+		await expect(page.locator('.page.editing')).toHaveCount(0);
+		expect(page.url()).toMatch(/#d=[A-Za-z0-9_-]+$/);
+		await expect(page.locator('.masthead h2')).toBeEmpty();
+		await page.goto(page.url());
+		await expect(page.locator('.page.editing')).toHaveCount(0);
+		await expect(page.locator('.hero-value')).not.toHaveText('0%');
+	});
 });
 
 test.describe('editing a loaded group', () => {
