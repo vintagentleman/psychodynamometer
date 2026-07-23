@@ -18,8 +18,14 @@
 	color-scheme: light dark;
 }
 
+/* Dark tokens apply when the system is dark and the user hasn't pinned light,
+   and — duplicated below — when the user pins dark. Plain CSS can't share one
+   token set across a media-gated and a class-gated selector without
+   light-dark() or style queries (both above our Baseline floor), so the two
+   blocks are kept adjacent and identical by hand. */
+
 @media (prefers-color-scheme: dark) {
-	:root {
+	:root:not(.theme-light) {
 		--page: oklch(15.9% 0 0deg);
 		--surface: oklch(21.7% 0 0deg);
 		--ink: oklch(100% 0 0deg);
@@ -33,6 +39,27 @@
 		--accent-wash: oklch(26.6% 0.0318 38.3deg);
 		--accent-mark: oklch(62.2% 0.1726 40.1deg);
 	}
+}
+
+:root.theme-dark {
+	--page: oklch(15.9% 0 0deg);
+	--surface: oklch(21.7% 0 0deg);
+	--ink: oklch(100% 0 0deg);
+	--ink-2: oklch(81.2% 0.0152 102.5deg);
+	--muted: oklch(62.3% 0.0092 91.5deg);
+	--hairline: oklch(29.2% 0.0036 106.6deg);
+	--border: oklch(100% 0 0deg / 10%);
+	--viz-done: oklch(62.2% 0.1612 255.1deg);
+	--meter-track: oklch(31.7% 0.0054 91.6deg);
+	--accent-ink: oklch(75.5% 0.1228 44.2deg);
+	--accent-wash: oklch(26.6% 0.0318 38.3deg);
+	--accent-mark: oklch(62.2% 0.1726 40.1deg);
+
+	color-scheme: dark;
+}
+
+:root.theme-light {
+	color-scheme: light;
 }
 
 * {
@@ -109,6 +136,17 @@ button {
 	gap: 10px;
 }
 
+@media (width < 400px) {
+	.topbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.topbar-actions {
+		justify-content: flex-end;
+	}
+}
+
 .gh-link {
 	display: inline-flex;
 	color: var(--muted);
@@ -118,23 +156,46 @@ button {
 	color: var(--ink);
 }
 
-.lang-toggle {
+.lang-toggle,
+.theme-toggle {
 	display: flex;
-	gap: 4px;
+	flex: none;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: 8px;
 
-	& .lang {
+	& button {
+		display: inline-flex;
+		align-items: center;
 		padding: 4px 10px;
+		border: 0;
+		border-radius: 0;
 		background: var(--surface);
 		color: var(--ink-2);
 		font-weight: 400;
 		font-size: 12px;
 
 		&.active {
-			border-color: transparent;
 			background: var(--ink);
 			color: var(--surface);
 			font-weight: 600;
 		}
+
+		& + button {
+			border-left: 1px solid var(--border);
+		}
+	}
+}
+
+.theme-pin {
+	& .i-sun,
+	& .i-moon {
+		display: none;
+	}
+
+	&.pin-light .i-sun,
+	&.pin-dark .i-moon {
+		display: block;
 	}
 }
 

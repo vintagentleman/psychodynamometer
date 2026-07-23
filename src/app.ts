@@ -3,8 +3,9 @@ import '../style.css';
 import { copyLink, syncUrl } from './app/actions.ts';
 import { sessionRow, slot } from './app/dom.ts';
 import { readForm } from './app/form.ts';
-import { refreshComputed, renderPage } from './app/render.ts';
+import { refreshComputed, refreshTopbar, renderPage } from './app/render.ts';
 import { app, locale, setLocale, setState, state, storeLang } from './app/store.ts';
+import { applyTheme, pinnedTheme, pinScheme } from './app/theme.ts';
 import { decodeGroup, isBlankInput } from './lib.ts';
 
 document.documentElement.lang = locale;
@@ -35,6 +36,15 @@ function wireApp() {
 		const copyButton = target.closest('#copy-link');
 		if (copyButton !== null) {
 			copyLink(copyButton as HTMLButtonElement);
+			return;
+		}
+
+		const themeButton = target.closest('button.theme');
+		if (themeButton !== null) {
+			applyTheme(
+				(themeButton as HTMLElement).dataset.themeChoice === 'system' ? null : pinScheme(),
+			);
+			refreshTopbar();
 			return;
 		}
 
@@ -98,5 +108,8 @@ function route() {
 }
 
 window.addEventListener('hashchange', route);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+	if (pinnedTheme() === null) refreshTopbar();
+});
 wireApp();
 route();

@@ -22,6 +22,7 @@ import type { GroupData, Session, WeekBucket } from '../lib/sessions.ts';
 import { cloneTemplate, segment, sessionRow, slot } from './dom.ts';
 import { clearBuildError, markInvalidRows, readForm } from './form.ts';
 import { app, locale, state } from './store.ts';
+import { pinnedTheme, pinScheme } from './theme.ts';
 
 function topbarFragment() {
 	const fragment = cloneTemplate('tpl-topbar');
@@ -29,6 +30,20 @@ function topbarFragment() {
 		const lang = (button as HTMLElement).dataset.lang;
 		button.classList.toggle('active', locale === lang);
 		button.setAttribute('aria-pressed', String(locale === lang));
+	}
+	const pinned = pinnedTheme();
+	const pin = pinScheme();
+	for (const button of fragment.querySelectorAll('button.theme')) {
+		const active =
+			(button as HTMLElement).dataset.themeChoice === 'system' ? pinned === null : pinned !== null;
+		button.classList.toggle('active', active);
+		button.setAttribute('aria-pressed', String(active));
+	}
+	const pinButton = fragment.querySelector('button.theme[data-theme-choice="pin"]');
+	if (pinButton !== null) {
+		pinButton.classList.toggle('pin-light', pin === 'light');
+		pinButton.classList.toggle('pin-dark', pin === 'dark');
+		pinButton.setAttribute('aria-label', t(locale, pin === 'light' ? 'themeLight' : 'themeDark'));
 	}
 	return fragment;
 }
@@ -287,4 +302,12 @@ export function refreshComputed() {
 	clearBuildError();
 	fillDerived(slot(app, '.page'), readForm(), new Date(), 'edit');
 	markInvalidRows();
+}
+
+// Swap only the live topbar for a freshly-rendered one. A theme change (a click,
+// or the system scheme flipping while in system mode) affects just the topbar
+// controls and the CSS-driven colours, so this avoids rebuilding #app — which
+// would otherwise drop unsaved input in the edit form.
+export function refreshTopbar() {
+	app.querySelector('.topbar')?.replaceWith(topbarFragment());
 }

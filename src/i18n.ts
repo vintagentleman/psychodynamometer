@@ -37,6 +37,10 @@ export const messages: Record<Locale, Record<string, string>> = {
 		timeZone: 'Time zone',
 		timesInZone: 'Times are in the group’s zone.',
 		yourTime: 'your time',
+		theme: 'Theme',
+		themeSystem: 'System theme',
+		themeLight: 'Light theme',
+		themeDark: 'Dark theme',
 	},
 	ru: {
 		appTitle: 'Психодинамометр',
@@ -74,6 +78,10 @@ export const messages: Record<Locale, Record<string, string>> = {
 		timeZone: 'Часовой пояс',
 		timesInZone: 'Время указано в часовом поясе группы.',
 		yourTime: 'ваше время',
+		theme: 'Тема',
+		themeSystem: 'Системная тема',
+		themeLight: 'Светлая тема',
+		themeDark: 'Тёмная тема',
 	},
 };
 
