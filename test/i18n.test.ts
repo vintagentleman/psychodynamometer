@@ -16,6 +16,13 @@ test('t interpolates params', () => {
 	expect(t('en', 'headerHours', { completed: '28.5', target: '41.5' })).toBe('28.5 of 41.5 hours');
 });
 
+test('t renders the schedule-fill notes in both locales', () => {
+	expect(t('ru', 'unscheduled', { hours: '1' })).toBe('1 ч не запланировано');
+	expect(t('en', 'unscheduled', { hours: '1' })).toBe('1 h unscheduled');
+	expect(t('ru', 'overscheduled', { hours: '2' })).toBe('2 ч перепланировано');
+	expect(t('en', 'overscheduled', { hours: '2' })).toBe('2 h overscheduled');
+});
+
 test('t falls back to the key when missing', () => {
 	expect(t('en', 'nope')).toBe('nope');
 });
