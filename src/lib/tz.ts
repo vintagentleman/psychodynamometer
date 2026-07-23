@@ -70,7 +70,9 @@ function padOffset(minutes: number): string {
 export function zoneOptions(nowMs: number): { value: string; label: string }[] {
 	return Intl.supportedValuesOf('timeZone')
 		.map((zone) => {
-			const offset = zoneOffsetMs(nowMs, zone) / 60000;
+			// Round to whole minutes: zoneOffsetMs is second-aligned, so a nowMs
+			// carrying milliseconds would otherwise yield e.g. 179.9996 → "GMT+02:59.99".
+			const offset = Math.round(zoneOffsetMs(nowMs, zone) / 60000);
 			return { value: zone, label: `(${padOffset(offset)}) ${zone}`, offset };
 		})
 		.sort((a, b) => a.offset - b.offset || a.value.localeCompare(b.value))

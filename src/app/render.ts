@@ -18,6 +18,7 @@ import {
 	viewerMatchesZone,
 	weeklyBuckets,
 	zonedCivilDate,
+	zoneOptions,
 } from '../lib.ts';
 import type { GroupData, Session, WeekBucket } from '../lib/sessions.ts';
 import { cloneTemplate, segment, sessionRow, slot } from './dom.ts';
@@ -274,11 +275,11 @@ export function renderPage() {
 		const zoneSelect = document.createElement('select');
 		zoneSelect.id = 'zone-select';
 		zoneSelect.setAttribute('aria-label', t(locale, 'timeZone'));
-		for (const z of Intl.supportedValuesOf('timeZone')) {
+		for (const { value, label } of zoneOptions(new Date().getTime())) {
 			const opt = document.createElement('option');
-			opt.value = z;
-			opt.textContent = z;
-			if (z === data.timeZone) opt.selected = true;
+			opt.value = value;
+			opt.textContent = label;
+			if (value === data.timeZone) opt.selected = true;
 			zoneSelect.appendChild(opt);
 		}
 		const zoneHelp = document.createElement('p');

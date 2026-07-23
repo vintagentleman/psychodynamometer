@@ -69,6 +69,13 @@ test('zoneOptions labels each zone with its padded GMT offset and sorts by offse
 	expect(idx('Asia/Yekaterinburg')).toBeLessThan(idx('Asia/Colombo'));
 });
 
+test('zoneOptions rounds to whole minutes for a millisecond-carrying instant', () => {
+	// a live Date.now() carries ms; the label must stay clean, not "GMT+02:59.99"
+	const opts = zoneOptions(Date.UTC(2026, 6, 1, 12, 0, 0) + 250);
+	const moscow = opts.find((o) => o.value === 'Europe/Moscow');
+	expect(moscow?.label).toBe('(GMT+03:00) Europe/Moscow');
+});
+
 test('viewerMatchesZone compares the viewer offset to the group offset', () => {
 	const ms = Date.UTC(2026, 5, 18, 16, 0);
 	// UTC+14 and UTC-12 have different offsets, so the host (whatever its zone)

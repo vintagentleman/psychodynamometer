@@ -89,3 +89,20 @@ test.describe('schedule sub-line hidden when the zone matches', () => {
 		expect(filled).toBe(0);
 	});
 });
+
+test.describe('zone picker', () => {
+	test.use({ timezoneId: 'Europe/Moscow' });
+
+	test('labels options with GMT offsets and preselects the detected zone', async ({ page }) => {
+		await page.goto('/'); // fresh build → edit mode
+		const select = page.locator('#zone-select');
+		await expect(select).toHaveCount(1);
+		const firstLabels = await select
+			.locator('option')
+			.evaluateAll((opts) => opts.slice(0, 5).map((o) => o.textContent ?? ''));
+		expect(firstLabels.every((l) => l.startsWith('(GMT'))).toBe(true);
+		// value stays IANA; the detected zone (Europe/Moscow here) is selected
+		await expect(select).toHaveValue('Europe/Moscow');
+		expect(await select.locator('option:checked').textContent()).toBe('(GMT+03:00) Europe/Moscow');
+	});
+});
