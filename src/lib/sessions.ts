@@ -65,6 +65,18 @@ export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
 	return sessions.sort(byStart);
 }
 
+// Chronological order for raw session inputs — the order the view renders them
+// in. ISO YYYY-MM-DD dates and 24h HH:MM times compare chronologically as plain
+// strings, so this needs no timezone and never throws on malformed or partial
+// rows. Returns a new array; the native stable sort keeps equal-key rows in
+// input order. Validates and drops nothing.
+export function sortSessionInputs(sessions: SessionInput[]): SessionInput[] {
+	const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+	return [...sessions].sort(
+		(a, b) => cmp(a.date, b.date) || cmp(a.start, b.start) || cmp(a.end, b.end),
+	);
+}
+
 export function computeProgress(
 	sessions: Session[],
 	targetHours: number,

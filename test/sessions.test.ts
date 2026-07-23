@@ -11,6 +11,7 @@ import {
 	parseSessions,
 	progressSegments,
 	shareableGroup,
+	sortSessionInputs,
 	weeklyBuckets,
 	weekStartOf,
 } from '../src/lib/sessions.ts';
@@ -312,4 +313,40 @@ test('shareableGroup keeps an untitled group — the title is optional', () => {
 
 test('shareableGroup keeps a zero-target group — the target is optional', () => {
 	expect(shareableGroup({ ...draft, targetHours: 0 })?.targetHours).toBe(0);
+});
+
+test('sortSessionInputs orders by date, then start, then end', () => {
+	const out = sortSessionInputs([
+		{ date: '2026-06-18', start: '19:00', end: '23:00' },
+		{ date: '2026-06-02', start: '19:00', end: '22:30' },
+		{ date: '2026-06-18', start: '09:00', end: '12:00' },
+		{ date: '2026-06-18', start: '19:00', end: '20:00' },
+	]);
+	expect(out.map((s) => `${s.date} ${s.start}-${s.end}`)).toEqual([
+		'2026-06-02 19:00-22:30',
+		'2026-06-18 09:00-12:00',
+		'2026-06-18 19:00-20:00',
+		'2026-06-18 19:00-23:00',
+	]);
+});
+
+test('sortSessionInputs returns a new array and does not mutate the input', () => {
+	const input = [
+		{ date: '2026-06-09', start: '20:00', end: '23:00' },
+		{ date: '2026-06-02', start: '19:00', end: '22:30' },
+	];
+	const out = sortSessionInputs(input);
+	expect(out).not.toBe(input);
+	expect(input[0].date).toBe('2026-06-09');
+	expect(input[1].date).toBe('2026-06-02');
+});
+
+test('sortSessionInputs sorts blank and partial rows predictably, dropping none', () => {
+	const out = sortSessionInputs([
+		{ date: '2026-06-02', start: '19:00', end: '22:30' },
+		{ date: '', start: '', end: '' },
+		{ date: '2026-06-01', start: '', end: '' },
+	]);
+	expect(out).toHaveLength(3);
+	expect(out.map((s) => s.date)).toEqual(['', '2026-06-01', '2026-06-02']);
 });
