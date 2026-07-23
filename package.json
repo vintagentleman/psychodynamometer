@@ -4,6 +4,7 @@
 	"description": "Static, shareable progress visualiser for time-bounded therapy and coaching groups",
 	"type": "module",
 	"private": true,
+	"license": "MIT",
 	"engines": {
 		"node": ">=26"
 	},
