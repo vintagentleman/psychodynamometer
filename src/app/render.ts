@@ -124,7 +124,8 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 
 	fillRhythm(page, buckets, nowCivil);
 
-	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs, zone, data.targetHours);
+	if (mode === 'view')
+		fillScheduleView(page, sessions, next, nowMs, zone, viewerZone, data.targetHours);
 }
 
 function fillRhythm(page: Element, buckets: WeekBucket[], nowCivil: Date) {
@@ -171,6 +172,7 @@ function fillScheduleView(
 	next: { session: Session; inProgress: boolean } | null,
 	nowMs: number,
 	zone: string,
+	viewerZone: string,
 	targetHours: number,
 ) {
 	const list = slot(page, '.schedule-slot');
@@ -184,8 +186,8 @@ function fillScheduleView(
 		item.classList.toggle('next', next !== null && session === next.session);
 		slot(row, '.date').textContent = formatDateShort(session.civilDate, locale);
 		slot(row, '.time').textContent = `${session.start}–${session.end}`;
-		if (session.endMs > nowMs && !viewerMatchesZone(session.startMs, zone)) {
-			slot(row, '.local-time').textContent = formatLocalTime(session.startMs, locale);
+		if (!viewerMatchesZone(session.startMs, zone)) {
+			slot(row, '.local-time').textContent = localLine(session, viewerZone, formatDateShort);
 		}
 		const hoursText = t(locale, 'hoursShort', { hours: formatHoursNum(session.hours, locale) });
 		slot(row, '.hours').textContent =

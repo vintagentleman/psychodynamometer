@@ -454,7 +454,7 @@ button {
 
 	& .session {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 10px;
 		padding: 7px 0;
 		font-variant-numeric: tabular-nums;
@@ -465,6 +465,7 @@ button {
 
 		& .dot {
 			flex: none;
+			margin-top: 0.4em;
 			width: 8px;
 			height: 8px;
 			border: 2px solid var(--viz-done);
@@ -489,17 +490,34 @@ button {
 			}
 		}
 
-		& .date {
-			min-width: 110px;
+		& .session-body {
+			flex: 1;
+			min-width: 0;
 		}
 
-		& .local-time {
-			color: var(--muted);
+		& .session-main {
+			display: flex;
+			align-items: baseline;
+			gap: 10px;
+			white-space: nowrap;
+		}
+
+		& .date {
+			min-width: 110px;
 		}
 
 		& .hours {
 			margin-left: auto;
 			color: var(--muted);
+		}
+
+		& .local-time {
+			color: var(--muted);
+			font-size: 13px;
+
+			&:empty {
+				display: none;
+			}
 		}
 	}
 }

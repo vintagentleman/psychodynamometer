@@ -39,3 +39,53 @@ test.describe('next-session local line', () => {
 		await expect(local).toContainText('GMT-4');
 	});
 });
+
+test.describe('schedule local sub-line', () => {
+	test.use({ timezoneId: 'America/New_York' });
+
+	test('shows a local range on both past and upcoming rows at equal height', async ({ page }) => {
+		await page.goto(
+			link({
+				title: 'Moscow Group',
+				targetHours: 10,
+				timeZone: 'Europe/Moscow',
+				sessions: [
+					{ date: '2026-07-16', start: '18:00', end: '21:00' }, // past
+					{ date: '2026-07-23', start: '18:00', end: '21:00' }, // upcoming (next)
+				],
+			}),
+		);
+		const rows = page.locator('.sessions .session');
+		await expect(rows).toHaveCount(2);
+		const past = rows.nth(0);
+		await expect(past).toHaveClass(/past/);
+		await expect(past.locator('.local-time')).toContainText('11:00–14:00');
+		await expect(past.locator('.local-time')).toContainText('GMT-4');
+		const upcoming = rows.nth(1);
+		await expect(upcoming.locator('.local-time')).toContainText('11:00–14:00');
+		await expect(upcoming.locator('.local-time')).toContainText('GMT-4');
+		// both carry a sub-line → uniform row height (bold vs regular weight
+		// leaves at most sub-pixel font-metric noise, not a ragged extra line)
+		const h0 = (await past.boundingBox())?.height ?? 0;
+		const h1 = (await upcoming.boundingBox())?.height ?? 0;
+		expect(Math.abs(h0 - h1)).toBeLessThanOrEqual(2);
+	});
+});
+
+test.describe('schedule sub-line hidden when the zone matches', () => {
+	test('no local sub-line for a viewer in the group zone', async ({ page }) => {
+		await page.goto(
+			link({
+				title: 'UTC Group',
+				targetHours: 10,
+				timeZone: 'UTC',
+				sessions: [{ date: '2026-07-23', start: '18:00', end: '21:00' }],
+			}),
+		);
+		const filled = await page.$$eval(
+			'.sessions .local-time',
+			(els) => els.filter((el) => (el.textContent ?? '') !== '').length,
+		);
+		expect(filled).toBe(0);
+	});
+});
