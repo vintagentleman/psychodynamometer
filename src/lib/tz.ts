@@ -46,6 +46,15 @@ export function viewerMatchesZone(ms: number, zone: string): boolean {
 	return zoneOffsetMs(ms, zone) === -new Date(ms).getTimezoneOffset() * 60000;
 }
 
+// True when two dates fall on the same local calendar day.
+export function sameLocalYmd(a: Date, b: Date): boolean {
+	return (
+		a.getFullYear() === b.getFullYear() &&
+		a.getMonth() === b.getMonth() &&
+		a.getDate() === b.getDate()
+	);
+}
+
 export function detectedZone(): string {
 	try {
 		return Intl.DateTimeFormat().resolvedOptions().timeZone;

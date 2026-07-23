@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { viewerMatchesZone, zonedCivilDate, zonedToInstant } from '../src/lib/tz.ts';
+import { sameLocalYmd, viewerMatchesZone, zonedCivilDate, zonedToInstant } from '../src/lib/tz.ts';
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
 	// asserted against Date.UTC(...), so these hold under any host TZ
@@ -39,6 +39,14 @@ test('zonedCivilDate expresses an instant as the group-zone civil date', () => {
 	expect(zonedCivilDate(new Date(Date.UTC(2026, 5, 14, 22, 0)), 'Europe/Moscow')).toEqual(
 		new Date(2026, 5, 15),
 	);
+});
+
+test('sameLocalYmd compares only the calendar day, ignoring time of day', () => {
+	expect(sameLocalYmd(new Date(2026, 6, 23, 0, 5), new Date(2026, 6, 23, 23, 55))).toBe(true);
+	expect(sameLocalYmd(new Date(2026, 6, 23, 23, 0), new Date(2026, 6, 24, 1, 0))).toBe(false);
+	// different month / year are not equal even on the same day-of-month
+	expect(sameLocalYmd(new Date(2026, 5, 23), new Date(2026, 6, 23))).toBe(false);
+	expect(sameLocalYmd(new Date(2025, 6, 23), new Date(2026, 6, 23))).toBe(false);
 });
 
 test('viewerMatchesZone compares the viewer offset to the group offset', () => {
