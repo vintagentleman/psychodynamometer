@@ -134,6 +134,12 @@ test.describe('view mode', () => {
 		await expect(page.locator('.sessions .session.next')).toHaveCount(1);
 	});
 
+	test('schedule rows carry a running cumulative percentage', async ({ page }) => {
+		const rows = page.locator('.sessions .session');
+		await expect(rows.first().locator('.hours')).toContainText('8%');
+		await expect(rows.last().locator('.hours')).toContainText('98%');
+	});
+
 	test('view offers a copy-link action', async ({ page }) => {
 		await expect(page.locator('#copy-link')).toHaveCount(1);
 	});

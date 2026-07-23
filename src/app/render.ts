@@ -1,6 +1,7 @@
 import { messages, t } from '../i18n.ts';
 import {
 	computeProgress,
+	cumulativePercents,
 	detectedZone,
 	findNextSession,
 	formatDateLong,
@@ -39,8 +40,11 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	const nowMs = now.getTime();
 	const nowCivil = zonedCivilDate(now, zone);
 	const sessions = parseSessions(data.sessions, zone);
-	const { completedHours, upcomingHours, remainingHours, percent, scheduleDelta } =
-		computeProgress(sessions, data.targetHours, nowMs);
+	const { completedHours, upcomingHours, remainingHours, percent, scheduleDelta } = computeProgress(
+		sessions,
+		data.targetHours,
+		nowMs,
+	);
 	const next = findNextSession(sessions, nowMs);
 	const buckets = weeklyBuckets(sessions, nowMs);
 
@@ -89,7 +93,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 
 	fillRhythm(page, buckets, nowCivil);
 
-	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs, zone);
+	if (mode === 'view') fillScheduleView(page, sessions, next, nowMs, zone, data.targetHours);
 }
 
 function fillRhythm(page: Element, buckets: WeekBucket[], nowCivil: Date) {
@@ -136,11 +140,13 @@ function fillScheduleView(
 	next: { session: Session; inProgress: boolean } | null,
 	nowMs: number,
 	zone: string,
+	targetHours: number,
 ) {
 	const list = slot(page, '.schedule-slot');
 	const ol = document.createElement('ol');
 	ol.className = 'sessions';
-	for (const session of sessions) {
+	const percents = cumulativePercents(sessions, targetHours);
+	for (const [index, session] of sessions.entries()) {
 		const row = cloneTemplate('tpl-session');
 		const item = row.firstElementChild as HTMLElement;
 		item.classList.toggle('past', session.endMs <= nowMs);
@@ -150,9 +156,9 @@ function fillScheduleView(
 		if (session.endMs > nowMs && !viewerMatchesZone(session.startMs, zone)) {
 			slot(row, '.local-time').textContent = formatLocalTime(session.startMs, locale);
 		}
-		slot(row, '.hours').textContent = t(locale, 'hoursShort', {
-			hours: formatHoursNum(session.hours, locale),
-		});
+		const hoursText = t(locale, 'hoursShort', { hours: formatHoursNum(session.hours, locale) });
+		slot(row, '.hours').textContent =
+			percents.length > 0 ? `${hoursText} · ${percents[index]}%` : hoursText;
 		ol.appendChild(row);
 	}
 	list.replaceChildren(ol);
