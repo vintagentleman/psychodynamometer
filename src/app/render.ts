@@ -52,7 +52,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 
 	const zoneTag = page.querySelector('.subline-zone');
 	if (zoneTag !== null) {
-		zoneTag.textContent = ` · ${formatOffsetTag(nowMs, zone, locale)} · ${t(locale, 'groupTime')}`;
+		zoneTag.textContent = ` · ${formatOffsetTag(nowMs, zone, locale)}`;
 	}
 
 	const rounded = Math.round(percent);
