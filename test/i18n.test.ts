@@ -13,9 +13,7 @@ test('stored language wins; otherwise navigator prefix; default en', () => {
 
 test('t interpolates params', () => {
 	expect(t('ru', 'hoursShort', { hours: '4' })).toBe('4 ч');
-	expect(t('en', 'headerHours', { completed: '28.5', target: '41.5' })).toBe(
-		'28.5 of 41.5 hours',
-	);
+	expect(t('en', 'headerHours', { completed: '28.5', target: '41.5' })).toBe('28.5 of 41.5 hours');
 });
 
 test('t falls back to the key when missing', () => {
