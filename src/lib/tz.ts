@@ -55,6 +55,28 @@ export function sameLocalYmd(a: Date, b: Date): boolean {
 	);
 }
 
+// "GMT±HH:MM" for an east-of-UTC offset in minutes (UTC → "GMT+00:00").
+function padOffset(minutes: number): string {
+	const sign = minutes < 0 ? '-' : '+';
+	const abs = Math.abs(minutes);
+	const hh = String(Math.floor(abs / 60)).padStart(2, '0');
+	const mm = String(abs % 60).padStart(2, '0');
+	return `GMT${sign}${hh}:${mm}`;
+}
+
+// Every supported IANA zone as a picker option, labelled with its current
+// offset and ordered by offset then name. Value stays IANA so storage/DST are
+// unchanged; the labelled offset is the one in effect at nowMs.
+export function zoneOptions(nowMs: number): { value: string; label: string }[] {
+	return Intl.supportedValuesOf('timeZone')
+		.map((zone) => {
+			const offset = zoneOffsetMs(nowMs, zone) / 60000;
+			return { value: zone, label: `(${padOffset(offset)}) ${zone}`, offset };
+		})
+		.sort((a, b) => a.offset - b.offset || a.value.localeCompare(b.value))
+		.map(({ value, label }) => ({ value, label }));
+}
+
 export function detectedZone(): string {
 	try {
 		return Intl.DateTimeFormat().resolvedOptions().timeZone;

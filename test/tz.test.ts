@@ -1,6 +1,12 @@
 import { expect, test } from 'vitest';
 
-import { sameLocalYmd, viewerMatchesZone, zonedCivilDate, zonedToInstant } from '../src/lib/tz.ts';
+import {
+	sameLocalYmd,
+	viewerMatchesZone,
+	zoneOptions,
+	zonedCivilDate,
+	zonedToInstant,
+} from '../src/lib/tz.ts';
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
 	// asserted against Date.UTC(...), so these hold under any host TZ
@@ -47,6 +53,20 @@ test('sameLocalYmd compares only the calendar day, ignoring time of day', () => 
 	// different month / year are not equal even on the same day-of-month
 	expect(sameLocalYmd(new Date(2026, 5, 23), new Date(2026, 6, 23))).toBe(false);
 	expect(sameLocalYmd(new Date(2025, 6, 23), new Date(2026, 6, 23))).toBe(false);
+});
+
+test('zoneOptions labels each zone with its padded GMT offset and sorts by offset', () => {
+	// fixed instant → offsets come from the zone param, not the host TZ (deterministic)
+	const opts = zoneOptions(Date.UTC(2026, 6, 1));
+	const byValue = new Map(opts.map((o) => [o.value, o.label]));
+	expect(byValue.get('Europe/Moscow')).toBe('(GMT+03:00) Europe/Moscow');
+	// half-hour zone keeps its minutes
+	expect(byValue.get('Asia/Colombo')).toBe('(GMT+05:30) Asia/Colombo');
+	// ascending by offset: Kaliningrad (+2) < Moscow (+3) < Yekaterinburg (+5) < Colombo (+5:30)
+	const idx = (v: string) => opts.findIndex((o) => o.value === v);
+	expect(idx('Europe/Kaliningrad')).toBeLessThan(idx('Europe/Moscow'));
+	expect(idx('Europe/Moscow')).toBeLessThan(idx('Asia/Yekaterinburg'));
+	expect(idx('Asia/Yekaterinburg')).toBeLessThan(idx('Asia/Colombo'));
 });
 
 test('viewerMatchesZone compares the viewer offset to the group offset', () => {
