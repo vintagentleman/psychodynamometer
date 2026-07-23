@@ -174,14 +174,15 @@ export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | nu
 
 export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';
 
-// The title is optional (an untitled group renders and shares fine); a
-// shareable group needs only a positive target and at least one valid session.
+// Title and target are both optional (an untitled, zero-target group renders
+// and shares fine — a 0 target just means "no total to measure against"); a
+// shareable group needs only at least one valid session.
 export function isComplete(draft: GroupData) {
-	return draft.targetHours > 0 && parseSessions(draft.sessions, draft.timeZone).length > 0;
+	return parseSessions(draft.sessions, draft.timeZone).length > 0;
 }
 
-// The draft as a shareable group, or null if any non-blank row is invalid or a
-// required field is missing — exactly what would produce a valid link.
+// The draft as a shareable group, or null if any non-blank row is invalid or
+// there are no valid sessions — exactly what would produce a valid link.
 export function shareableGroup(draft: GroupData): GroupData | null {
 	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
 	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };

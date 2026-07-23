@@ -121,6 +121,22 @@ test.describe('copy link', () => {
 		await expect(page.locator('.page.editing')).toHaveCount(0);
 		await expect(page.locator('.hero-value')).not.toHaveText('0%');
 	});
+
+	test('a zero-target group is shareable and reads as overscheduled', async ({ page }) => {
+		await page.goto('/');
+		await page.fill('input[name="date"]', '2026-01-05');
+		await page.fill('input[name="start"]', '10:00');
+		await page.fill('input[name="end"]', '13:00');
+		// Target left blank (coerces to 0); the glance flags the whole plan as over.
+		await expect(page.locator('.hero')).toContainText('3 h overscheduled');
+		await page.click('#done');
+		await expect(page.locator('.page.editing')).toHaveCount(0);
+		expect(page.url()).toMatch(/#d=[A-Za-z0-9_-]+$/);
+		await page.goto(page.url());
+		await expect(page.locator('.page.editing')).toHaveCount(0);
+		await expect(page.locator('.hero-value')).toHaveText('0%');
+		await expect(page.locator('.hero')).toContainText('3 h overscheduled');
+	});
 });
 
 test.describe('editing a loaded group', () => {

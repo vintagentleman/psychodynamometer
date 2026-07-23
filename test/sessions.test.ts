@@ -273,11 +273,11 @@ test('isBlankInput is true only when every field is empty', () => {
 	expect(isBlankInput({ date: '2026-01-05', start: '', end: '' })).toBe(false);
 });
 
-test('isComplete needs a positive target and a valid session, but no title', () => {
+test('isComplete needs only a valid session — title and target are optional', () => {
 	expect(isComplete(draft)).toBe(true);
 	expect(isComplete({ ...draft, title: '' })).toBe(true);
 	expect(isComplete({ ...draft, title: '  ' })).toBe(true);
-	expect(isComplete({ ...draft, targetHours: 0 })).toBe(false);
+	expect(isComplete({ ...draft, targetHours: 0 })).toBe(true);
 	expect(isComplete({ ...draft, sessions: [] })).toBe(false);
 	expect(
 		isComplete({ ...draft, sessions: [{ date: '2026-01-05', start: '13:00', end: '10:00' }] }),
@@ -302,11 +302,14 @@ test('shareableGroup returns null when a non-blank row is invalid', () => {
 	expect(shareableGroup(bad)).toBeNull();
 });
 
-test('shareableGroup returns null when the group is incomplete', () => {
-	expect(shareableGroup({ ...draft, targetHours: 0 })).toBeNull();
+test('shareableGroup returns null when there are no valid sessions', () => {
 	expect(shareableGroup({ ...draft, sessions: [] })).toBeNull();
 });
 
 test('shareableGroup keeps an untitled group — the title is optional', () => {
 	expect(shareableGroup({ ...draft, title: '' })?.title).toBe('');
+});
+
+test('shareableGroup keeps a zero-target group — the target is optional', () => {
+	expect(shareableGroup({ ...draft, targetHours: 0 })?.targetHours).toBe(0);
 });

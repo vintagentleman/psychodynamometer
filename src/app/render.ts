@@ -75,7 +75,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	slot(page, '.hero-value').textContent = `${rounded}%`;
 	let heroSide = ` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
 	const fillGap = Math.round(Math.abs(scheduleDelta) * 10) / 10;
-	if (data.targetHours > 0 && fillGap !== 0) {
+	if (fillGap !== 0) {
 		const key = scheduleDelta > 0 ? 'unscheduled' : 'overscheduled';
 		heroSide += ` · ${t(locale, key, { hours: formatHoursNum(fillGap, locale) })}`;
 	}
