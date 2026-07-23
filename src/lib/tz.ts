@@ -41,7 +41,7 @@ export function zonedCivilDate(now: Date, zone: string): Date {
 }
 
 // True when the viewer's local offset equals `zone`'s at `ms` — then no
-// separate "your time" line is needed.
+// separate local-time line is needed.
 export function viewerMatchesZone(ms: number, zone: string): boolean {
 	return zoneOffsetMs(ms, zone) === -new Date(ms).getTimezoneOffset() * 60000;
 }

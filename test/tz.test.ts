@@ -3,9 +3,9 @@ import { expect, test } from 'vitest';
 import {
 	sameLocalYmd,
 	viewerMatchesZone,
-	zoneOptions,
 	zonedCivilDate,
 	zonedToInstant,
+	zoneOptions,
 } from '../src/lib/tz.ts';
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {

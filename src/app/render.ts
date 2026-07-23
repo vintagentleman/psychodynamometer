@@ -14,6 +14,7 @@ import {
 	nowWeekIndex,
 	parseSessions,
 	progressSegments,
+	sameLocalYmd,
 	viewerMatchesZone,
 	weeklyBuckets,
 	zonedCivilDate,
@@ -48,10 +49,27 @@ function topbarFragment() {
 	return fragment;
 }
 
+// The viewer-local "start–end · GMT±N" line for a session, prefixed with its
+// own date only when that local day differs from the group's civil date.
+function localLine(
+	session: Session,
+	viewerZone: string,
+	formatDate: (date: Date, locale: string) => string,
+): string {
+	const range = `${formatLocalTime(session.startMs, locale)}–${formatLocalTime(session.endMs, locale)}`;
+	const tag = formatOffsetTag(session.startMs, viewerZone, locale);
+	const localDate = new Date(session.startMs);
+	const prefix = sameLocalYmd(localDate, session.civilDate)
+		? ''
+		: `${formatDate(localDate, locale)} · `;
+	return `${prefix}${range} · ${tag}`;
+}
+
 // Recomputes derived regions only, never the inputs, so it's safe on every
 // keystroke — the caret survives.
 function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | 'edit') {
 	const zone = data.timeZone;
+	const viewerZone = detectedZone();
 	const nowMs = now.getTime();
 	const nowCivil = zonedCivilDate(now, zone);
 	const sessions = parseSessions(data.sessions, zone);
@@ -99,9 +117,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	const local = slot(page, '.next-local');
 	if (next !== null && !viewerMatchesZone(next.session.startMs, zone)) {
 		local.hidden = false;
-		local.textContent =
-			`${formatDateLong(new Date(next.session.startMs), locale)} · ` +
-			`${formatLocalTime(next.session.startMs, locale)} · ${t(locale, 'yourTime')}`;
+		local.textContent = localLine(next.session, viewerZone, formatDateLong);
 	} else {
 		local.hidden = true;
 	}
