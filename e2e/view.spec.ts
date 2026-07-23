@@ -36,6 +36,10 @@ test.describe('view mode', () => {
 		await expect(page.locator('.hero')).toContainText('h left');
 	});
 
+	test('hero flags unscheduled hours', async ({ page }) => {
+		await expect(page.locator('.hero')).toContainText('1 h unscheduled');
+	});
+
 	test('meter exposes labelled progressbar semantics', async ({ page }) => {
 		const heroPct = ((await page.locator('.hero-value').textContent()) ?? '').replace('%', '');
 		const meter = page.locator('.meter');

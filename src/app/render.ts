@@ -39,11 +39,8 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	const nowMs = now.getTime();
 	const nowCivil = zonedCivilDate(now, zone);
 	const sessions = parseSessions(data.sessions, zone);
-	const { completedHours, upcomingHours, remainingHours, percent } = computeProgress(
-		sessions,
-		data.targetHours,
-		nowMs,
-	);
+	const { completedHours, upcomingHours, remainingHours, percent, scheduleDelta } =
+		computeProgress(sessions, data.targetHours, nowMs);
 	const next = findNextSession(sessions, nowMs);
 	const buckets = weeklyBuckets(sessions, nowMs);
 
@@ -57,8 +54,13 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 
 	const rounded = Math.round(percent);
 	slot(page, '.hero-value').textContent = `${rounded}%`;
-	slot(page, '.hero-side').textContent =
-		` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
+	let heroSide = ` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
+	const fillGap = Math.round(Math.abs(scheduleDelta) * 10) / 10;
+	if (data.targetHours > 0 && fillGap !== 0) {
+		const key = scheduleDelta > 0 ? 'unscheduled' : 'overscheduled';
+		heroSide += ` · ${t(locale, key, { hours: formatHoursNum(fillGap, locale) })}`;
+	}
+	slot(page, '.hero-side').textContent = heroSide;
 	const meter = slot(page, '.meter');
 	meter.setAttribute('role', 'progressbar');
 	meter.setAttribute('aria-label', t(locale, 'progress'));

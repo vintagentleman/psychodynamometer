@@ -31,6 +31,11 @@ test.describe('build mode (no hash)', () => {
 		expect(page.url()).not.toContain('#d=');
 	});
 
+	test('the live glance flags unscheduled hours while editing', async ({ page }) => {
+		await fillValidBuild(page);
+		await expect(page.locator('.hero')).toContainText('7 h unscheduled');
+	});
+
 	test('invalid rows are flagged with aria-invalid and clear when fixed', async ({ page }) => {
 		await fillValidBuild(page);
 		await page.fill('input[name="end"]', '09:00');
