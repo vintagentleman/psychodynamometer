@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 
 import {
 	computeProgress,
+	cumulativePercents,
 	findNextSession,
 	isBlankInput,
 	isComplete,
@@ -135,6 +136,37 @@ test('progressSegments clamps overshoot so the bar never exceeds 100%', () => {
 
 test('progressSegments is all zero with no target', () => {
 	expect(progressSegments(5, 5, 0)).toEqual({ donePct: 0, upcomingPct: 0 });
+});
+
+test('cumulativePercents tracks running progress after each session', () => {
+	// precursor fixture: per-session hours summing to 40.5 against a 41.5 target
+	const precursor = parseSessions(
+		[
+			{ date: '2026-06-02', start: '19:00', end: '22:30' }, // 3.5 -> 3.5
+			{ date: '2026-06-09', start: '20:00', end: '23:00' }, // 3.0 -> 6.5
+			{ date: '2026-06-18', start: '19:00', end: '23:00' }, // 4.0 -> 10.5
+			{ date: '2026-06-25', start: '19:00', end: '22:30' }, // 3.5 -> 14.0
+			{ date: '2026-06-30', start: '19:00', end: '22:30' }, // 3.5 -> 17.5
+			{ date: '2026-07-16', start: '19:00', end: '21:00' }, // 2.0 -> 19.5
+			{ date: '2026-07-18', start: '09:00', end: '12:00' }, // 3.0 -> 22.5
+			{ date: '2026-07-23', start: '18:00', end: '21:00' }, // 3.0 -> 25.5
+			{ date: '2026-07-28', start: '18:00', end: '21:00' }, // 3.0 -> 28.5
+			{ date: '2026-08-04', start: '18:00', end: '22:00' }, // 4.0 -> 32.5
+			{ date: '2026-08-09', start: '08:00', end: '16:00' }, // 8.0 -> 40.5
+		],
+		'UTC',
+	);
+	expect(cumulativePercents(precursor, 41.5)).toEqual([8, 16, 25, 34, 42, 47, 54, 61, 69, 78, 98]);
+});
+
+test('cumulativePercents does not clamp an over-filled plan', () => {
+	// fixture = 3h,4h,5h = 12h; against target 10 the tail exceeds 100%
+	expect(cumulativePercents(fixture, 10)).toEqual([30, 70, 120]);
+});
+
+test('cumulativePercents is empty for no target or no sessions', () => {
+	expect(cumulativePercents(fixture, 0)).toEqual([]);
+	expect(cumulativePercents([], 10)).toEqual([]);
 });
 
 test('findNextSession picks the earliest not-yet-ended session', () => {

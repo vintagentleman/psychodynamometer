@@ -103,6 +103,20 @@ export function progressSegments(
 	return { donePct, upcomingPct };
 }
 
+// Running progress after each session, as a percentage of target: the
+// cumulative sum of session hours in the order given (pass a date-sorted
+// parseSessions result), divided by target. Aligned index-for-index with the
+// input. NOT clamped — an over-filled plan reads past 100% in its tail. Empty
+// input or a non-positive target yields an empty array.
+export function cumulativePercents(sessions: Session[], targetHours: number): number[] {
+	if (targetHours <= 0) return [];
+	let running = 0;
+	return sessions.map((session) => {
+		running += session.hours;
+		return Math.round((running / targetHours) * 100);
+	});
+}
+
 // Earliest session that has not ended. A session running right now counts,
 // flagged inProgress.
 export function findNextSession(
