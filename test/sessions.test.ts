@@ -35,11 +35,57 @@ test('parseSessions hydrates instants and civil date in the group zone', () => {
 	expect(s.civilDate).toEqual(new Date(2026, 5, 18));
 });
 
-test('parseSession rejects end <= start and garbage', () => {
+test('parseSession rejects a zero-length session and garbage', () => {
 	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '19:00' })).toBeNull();
-	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '18:00' })).toBeNull();
+	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '25:00' })).toBeNull();
 	expect(parseSession({ date: 'nonsense', start: '19:00', end: '20:00' })).toBeNull();
 	expect(parseSession({ date: '', start: '', end: '' })).toBeNull();
+});
+
+test('parseSession reads an end before the start as ending the next day', () => {
+	const s = parseSession({ date: '2026-06-18', start: '22:00', end: '01:00' });
+	expect(s?.hours).toBe(3);
+	expect(s?.nextDay).toBe(true);
+	// the far edge: 19:00 to 18:00 is 23 hours, not an error
+	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '18:00' })?.hours).toBe(23);
+});
+
+test('parseSession marks a same-day session nextDay false', () => {
+	expect(parseSession({ date: '2026-06-18', start: '19:00', end: '22:30' })?.nextDay).toBe(false);
+});
+
+test('parseSessions puts an overnight end on the following calendar day', () => {
+	const [s] = parseSessions([{ date: '2026-06-18', start: '22:00', end: '01:00' }], 'UTC');
+	expect(s.startMs).toBe(Date.UTC(2026, 5, 18, 22, 0));
+	expect(s.endMs).toBe(Date.UTC(2026, 5, 19, 1, 0));
+	expect(s.civilDate).toEqual(new Date(2026, 5, 18)); // the start date still keys the row
+});
+
+test('parseSessions rolls an overnight end over a month and a year boundary', () => {
+	const [aug] = parseSessions([{ date: '2026-08-31', start: '22:00', end: '01:00' }], 'UTC');
+	expect(aug.endMs).toBe(Date.UTC(2026, 8, 1, 1, 0));
+	const [dec] = parseSessions([{ date: '2026-12-31', start: '22:00', end: '01:00' }], 'UTC');
+	expect(dec.endMs).toBe(Date.UTC(2027, 0, 1, 1, 0));
+});
+
+test('an overnight session spanning a DST transition keeps its wall-clock hours', () => {
+	// Europe/Berlin springs forward 02:00 -> 03:00 on 2026-03-29, so 23:00-03:00
+	// is 4 hours on the clock but only 3 real hours.
+	const [s] = parseSessions(
+		[{ date: '2026-03-28', start: '23:00', end: '03:00' }],
+		'Europe/Berlin',
+	);
+	expect(s.hours).toBe(4);
+	expect(s.endMs - s.startMs).toBe(3 * 3_600_000);
+});
+
+test('weeklyBuckets counts an overnight session in the week it began', () => {
+	// Sunday 2026-06-21 22:00 -> Monday 2026-06-22 01:00, keyed to the Sunday's week.
+	const sessions = parseSessions([{ date: '2026-06-21', start: '22:00', end: '01:00' }], 'UTC');
+	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 1)); // now: before the session
+	expect(buckets).toHaveLength(1);
+	expect(buckets[0].weekStart).toEqual(new Date(2026, 5, 15)); // Monday of that week
+	expect(buckets[0].upcomingHours).toBe(3);
 });
 
 test('parseSession rejects calendar dates that would silently roll over', () => {
@@ -281,7 +327,7 @@ test('isComplete needs only a valid session — title and target are optional', 
 	expect(isComplete({ ...draft, targetHours: 0 })).toBe(true);
 	expect(isComplete({ ...draft, sessions: [] })).toBe(false);
 	expect(
-		isComplete({ ...draft, sessions: [{ date: '2026-01-05', start: '13:00', end: '10:00' }] }),
+		isComplete({ ...draft, sessions: [{ date: '2026-01-05', start: '10:00', end: '10:00' }] }),
 	).toBe(false);
 });
 
@@ -298,7 +344,7 @@ test('shareableGroup drops blank rows and returns the cleaned group when complet
 test('shareableGroup returns null when a non-blank row is invalid', () => {
 	const bad = {
 		...draft,
-		sessions: [...draft.sessions, { date: '2026-02-01', start: '13:00', end: '10:00' }],
+		sessions: [...draft.sessions, { date: '2026-02-01', start: '10:00', end: '10:00' }],
 	};
 	expect(shareableGroup(bad)).toBeNull();
 });

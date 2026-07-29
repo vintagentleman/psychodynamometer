@@ -88,6 +88,18 @@ test('target is quantized to the half hour', () => {
 	expect(decoded?.targetHours).toBe(40.5);
 });
 
+test('an overnight session round-trips with the format marker unchanged', () => {
+	const night: GroupData = {
+		title: 'Night',
+		targetHours: 3,
+		timeZone: 'UTC',
+		sessions: [{ date: '2026-06-18', start: '22:00', end: '01:00' }],
+	};
+	const payload = encodeGroup(night);
+	expect(decodeGroup(payload)).toEqual(night);
+	expect(Buffer.from(payload, 'base64url')[0]).toBe(2); // old links must still decode
+});
+
 test('decode returns null on malformed payloads', () => {
 	expect(decodeGroup('')).toBeNull(); // empty
 	expect(decodeGroup('%%%garbage%%%')).toBeNull(); // not base64url
@@ -126,7 +138,7 @@ test('decode rejects packed fields that are not real datetimes', () => {
 	expect(decodeGroup(pack(month13, 600, 660))).toBeNull(); // month 13
 	const jan1 = ((2026 - 2000) << 9) | (1 << 5) | 1;
 	expect(decodeGroup(pack(jan1, 1500, 1560))).toBeNull(); // minute 1500 -> hour 25
-	expect(decodeGroup(pack(jan1, 700, 600))).toBeNull(); // end before start
+	expect(decodeGroup(pack(jan1, 600, 600))).toBeNull(); // zero-length session
 });
 
 test('decode rejects a title with a broken utf-8 tail', () => {

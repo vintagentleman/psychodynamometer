@@ -38,7 +38,7 @@ test.describe('build mode (no hash)', () => {
 
 	test('invalid rows are flagged with aria-invalid and clear when fixed', async ({ page }) => {
 		await fillValidBuild(page);
-		await page.fill('input[name="end"]', '09:00');
+		await page.fill('input[name="end"]', '10:00'); // zero-length; 09:00 would now be overnight
 		expect(page.url()).not.toContain('#d=');
 		await expect(page.locator('#rows .row.invalid')).toHaveCount(1);
 		await expect(page.locator('#rows .row input[aria-invalid="true"]')).toHaveCount(3);

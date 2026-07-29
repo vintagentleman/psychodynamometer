@@ -9,6 +9,7 @@ export type GroupData = {
 };
 export type Session = SessionInput & {
 	hours: number;
+	nextDay: boolean;
 	civilDate: Date;
 	startMs: number;
 	endMs: number;
@@ -20,12 +21,10 @@ const byStart = (a: Session, b: Session) => a.startMs - b.startMs;
 // Zone-independent: calendar/time validity does not depend on the group's timezone.
 export function parseSession(
 	input: SessionInput,
-): { date: string; start: string; end: string; hours: number } | null {
+): { date: string; start: string; end: string; hours: number; nextDay: boolean } | null {
 	const startDT = new Date(`${input.date}T${input.start}`);
 	const endDT = new Date(`${input.date}T${input.end}`);
-	if (Number.isNaN(startDT.getTime()) || Number.isNaN(endDT.getTime()) || endDT <= startDT) {
-		return null;
-	}
+	if (Number.isNaN(startDT.getTime()) || Number.isNaN(endDT.getTime())) return null;
 	// Reject silent date rollovers (2026-02-30 -> Mar 2) and years the 2-digit hash can't hold.
 	const [year, month, day] = input.date.split('-').map(Number);
 	if (
@@ -38,10 +37,15 @@ export function parseSession(
 		return null;
 	}
 	// Wall-clock minutes, not the epoch delta, so a DST-spanning session reads right.
-	const [startH, startMin] = input.start.split(':').map(Number);
-	const [endH, endMin] = input.end.split(':').map(Number);
-	const hours = (endH * 60 + endMin - (startH * 60 + startMin)) / 60;
-	return { date: input.date, start: input.start, end: input.end, hours };
+	const [startH, startM] = input.start.split(':').map(Number);
+	const [endH, endM] = input.end.split(':').map(Number);
+	const startMinute = startH * 60 + startM;
+	const endMinute = endH * 60 + endM;
+	if (endMinute === startMinute) return null;
+	// An end before the start runs past midnight into the next day.
+	const nextDay = endMinute < startMinute;
+	const hours = (endMinute - startMinute + (nextDay ? 1440 : 0)) / 60;
+	return { date: input.date, start: input.start, end: input.end, hours, nextDay };
 }
 
 export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
@@ -50,13 +54,17 @@ export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
 		const valid = parseSession(input);
 		if (valid === null) continue;
 		const [year, month, day] = input.date.split('-').map(Number);
-		const [startH, startMin] = input.start.split(':').map(Number);
-		const [endH, endMin] = input.end.split(':').map(Number);
+		const [startH, startM] = input.start.split(':').map(Number);
+		const [endH, endM] = input.end.split(':').map(Number);
 		sessions.push({
 			...valid,
 			civilDate: new Date(year, month - 1, day),
-			startMs: zonedToInstant({ y: year, mo: month, d: day, h: startH, mi: startMin }, zone),
-			endMs: zonedToInstant({ y: year, mo: month, d: day, h: endH, mi: endMin }, zone),
+			startMs: zonedToInstant({ y: year, mo: month, d: day, h: startH, mi: startM }, zone),
+			// Date.UTC normalises an overflowing day, so month and year ends need no case.
+			endMs: zonedToInstant(
+				{ y: year, mo: month, d: valid.nextDay ? day + 1 : day, h: endH, mi: endM },
+				zone,
+			),
 		});
 	}
 	return sessions.sort(byStart);
