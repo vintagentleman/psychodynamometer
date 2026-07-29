@@ -7,6 +7,7 @@ import {
 	formatLocalTime,
 	formatMonth,
 	formatOffsetTag,
+	formatRange,
 	formatWeekRange,
 } from '../src/lib/format.ts';
 
@@ -43,6 +44,11 @@ test('formatted hours use a plain space, not NBSP, as the ru group separator', (
 test('formatOffsetTag renders the zone offset', () => {
 	expect(formatOffsetTag(Date.UTC(2026, 5, 18, 16, 0), 'Europe/Moscow', 'en')).toBe('GMT+3');
 	expect(formatOffsetTag(Date.UTC(2026, 0, 15, 14, 0), 'America/New_York', 'en')).toBe('GMT-5');
+});
+
+test('formatRange marks only a session that ends the next day', () => {
+	expect(formatRange('19:00', '23:00', false)).toBe('19:00–23:00');
+	expect(formatRange('22:00', '01:00', true)).toBe('22:00–01:00 +1');
 });
 
 test('formatLocalTime renders HH:MM', () => {
