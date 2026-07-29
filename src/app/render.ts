@@ -10,6 +10,7 @@ import {
 	formatLocalTime,
 	formatMonth,
 	formatOffsetTag,
+	formatRange,
 	formatWeekRange,
 	nowWeekIndex,
 	parseSessions,
@@ -51,18 +52,25 @@ function topbarFragment() {
 }
 
 // The viewer-local "start–end · GMT±N" line for a session, prefixed with its
-// own date only when that local day differs from the group's civil date.
+// own date only when that local day differs from the group's civil date. The
+// +1 marker comes from the viewer's own instants: a local end can cross
+// midnight even when the group's does not.
 function localLine(
 	session: Session,
 	viewerZone: string,
 	formatDate: (date: Date, locale: string) => string,
 ): string {
-	const range = `${formatLocalTime(session.startMs, locale)}–${formatLocalTime(session.endMs, locale)}`;
+	const localStart = new Date(session.startMs);
+	const localEnd = new Date(session.endMs);
+	const range = formatRange(
+		formatLocalTime(session.startMs, locale),
+		formatLocalTime(session.endMs, locale),
+		!sameLocalYmd(localStart, localEnd),
+	);
 	const tag = formatOffsetTag(session.startMs, viewerZone, locale);
-	const localDate = new Date(session.startMs);
-	const prefix = sameLocalYmd(localDate, session.civilDate)
+	const prefix = sameLocalYmd(localStart, session.civilDate)
 		? ''
-		: `${formatDate(localDate, locale)} · `;
+		: `${formatDate(localStart, locale)} · `;
 	return `${prefix}${range} · ${tag}`;
 }
 
@@ -111,7 +119,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	slot(page, '.meter-now').style.left = `${segments.donePct}%`;
 
 	slot(page, '.next-when').textContent = next
-		? `${formatDateLong(next.session.civilDate, locale)} · ${next.session.start}–${next.session.end}` +
+		? `${formatDateLong(next.session.civilDate, locale)} · ${formatRange(next.session.start, next.session.end, next.session.nextDay)}` +
 			(next.inProgress ? ` · ${t(locale, 'inProgress')}` : '')
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
@@ -186,7 +194,7 @@ function fillScheduleView(
 		item.classList.toggle('past', session.endMs <= nowMs);
 		item.classList.toggle('next', next !== null && session === next.session);
 		slot(row, '.date').textContent = formatDateShort(session.civilDate, locale);
-		slot(row, '.time').textContent = `${session.start}–${session.end}`;
+		slot(row, '.time').textContent = formatRange(session.start, session.end, session.nextDay);
 		if (!viewerMatchesZone(session.startMs, zone)) {
 			slot(row, '.local-time').textContent = localLine(session, viewerZone, formatDateShort);
 		}

@@ -90,6 +90,48 @@ test.describe('schedule sub-line hidden when the zone matches', () => {
 	});
 });
 
+test.describe('overnight sessions', () => {
+	test('marks the group-zone range with +1 in both the next line and the schedule', async ({
+		page,
+	}) => {
+		await page.goto(
+			link({
+				title: 'Night Group',
+				targetHours: 10,
+				timeZone: 'UTC',
+				sessions: [{ date: '2026-07-23', start: '22:00', end: '01:00' }],
+			}),
+		);
+		await expect(page.locator('.next-when')).toContainText('Thursday 23 July · 22:00–01:00 +1');
+		await expect(page.locator('.sessions .session .time')).toHaveText('22:00–01:00 +1');
+		// three hours, not twenty-one
+		await expect(page.locator('.sessions .session .hours')).toContainText('3 h');
+		// viewer is UTC (playwright.config.ts), so no local sub-line is needed
+		await expect(page.locator('.next-local')).toBeHidden();
+	});
+});
+
+test.describe('overnight in the viewer zone only', () => {
+	test.use({ timezoneId: 'Europe/Moscow' });
+
+	test('marks +1 on the local line when only the local end crosses midnight', async ({ page }) => {
+		await page.goto(
+			link({
+				title: 'UTC Group',
+				targetHours: 10,
+				timeZone: 'UTC',
+				sessions: [{ date: '2026-07-23', start: '20:00', end: '23:00' }],
+			}),
+		);
+		// 20:00–23:00 UTC is 23:00–02:00 in Moscow: the group day never rolls, the viewer's does
+		await expect(page.locator('.next-when')).toContainText('20:00–23:00');
+		await expect(page.locator('.next-when')).not.toContainText('+1');
+		const local = page.locator('.next-local');
+		await expect(local).toContainText('23:00–02:00 +1');
+		await expect(local).toContainText('GMT+3');
+	});
+});
+
 test.describe('zone picker', () => {
 	test.use({ timezoneId: 'Europe/Moscow' });
 
