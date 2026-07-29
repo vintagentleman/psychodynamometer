@@ -2,7 +2,7 @@ import type { GroupData, SessionInput } from './sessions.ts';
 import { parseSession } from './sessions.ts';
 
 // The wire format, not the app version: 1 was the JSON payload this replaced,
-// retired before any link was shared. decodeGroup rejects any other marker.
+// retired before any link was shared.
 const FORMAT = 2;
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder('utf-8', { fatal: true });

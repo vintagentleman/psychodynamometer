@@ -1,6 +1,5 @@
-// Ceilings the wire format in codec.ts imposes on a group. They live here rather
-// than in codec.ts because codec.ts already imports from sessions.ts, and the
-// reverse import would be a cycle.
+// Ceilings the codec's wire format imposes. Not in codec.ts: it imports from
+// sessions.ts, so importing back would cycle.
 
 // The session count is a single byte.
 export const MAX_SESSIONS = 255;

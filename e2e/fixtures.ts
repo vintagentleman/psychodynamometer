@@ -30,8 +30,7 @@ export type GroupInput = Parameters<typeof encodeGroup>[0];
 
 export const link = (data: GroupInput) => `/#d=${encodeGroup(data)}`;
 
-// Exactly at the wire format's one-byte session ceiling (see src/lib/limits.ts):
-// 255 one-hour sessions spread over distinct days of 2026.
+// Exactly at the wire format's one-byte session ceiling.
 export const fullGroup: GroupInput = {
 	title: 'Full',
 	targetHours: 255,

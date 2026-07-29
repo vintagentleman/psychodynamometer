@@ -60,7 +60,7 @@ test('parseSessions puts an overnight end on the following calendar day', () => 
 	const [s] = parseSessions([{ date: '2026-06-18', start: '22:00', end: '01:00' }], 'UTC');
 	expect(s.startMs).toBe(Date.UTC(2026, 5, 18, 22, 0));
 	expect(s.endMs).toBe(Date.UTC(2026, 5, 19, 1, 0));
-	expect(s.civilDate).toEqual(new Date(2026, 5, 18)); // the start date still keys the row
+	expect(s.civilDate).toEqual(new Date(2026, 5, 18)); // civilDate is the start date
 });
 
 test('parseSessions rolls an overnight end over a month and a year boundary', () => {

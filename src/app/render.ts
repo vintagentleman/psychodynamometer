@@ -53,9 +53,9 @@ function topbarFragment() {
 }
 
 // The viewer-local "start–end · GMT±N" line for a session, prefixed with its
-// own date only when that local day differs from the group's civil date. The
-// +1 marker comes from the viewer's own instants: a local end can cross
-// midnight even when the group's does not.
+// own date only when that local day differs from the group's civil date. The +1
+// comes from the viewer's instants: a local end can cross midnight when the
+// group's does not.
 function localLine(
 	session: Session,
 	viewerZone: string,

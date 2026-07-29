@@ -25,7 +25,6 @@ export function syncUrl() {
 	);
 }
 
-// Show why a draft was refused, and flag the target when it is the cause.
 export function reportError(reason: 'rows' | 'target' | 'count') {
 	markTarget(reason === 'target');
 	if (reason === 'target') {

@@ -67,8 +67,8 @@
 }
 
 :where(a, button, input, select):focus-visible {
-	/* Explicit because the UA ring is near-invisible against an active toggle's
-	   dark fill. Zero specificity so a component can adjust the offset. */
+	/* The UA ring is near-invisible against an active toggle's dark fill.
+	   :where() keeps specificity at zero so components can override. */
 	outline: 2px solid var(--viz-done);
 	outline-offset: 2px;
 }
@@ -193,8 +193,7 @@ button {
 		}
 
 		&:focus-visible {
-			/* The group clips to its rounded corners, so an outward ring would be
-			   invisible; this one is drawn inside the button. */
+			/* The group clips to its rounded corners: an outward ring is invisible. */
 			outline-offset: -3px;
 		}
 	}
@@ -575,8 +574,8 @@ button {
 		display: flex;
 		gap: 6px;
 
-		/* As a grid item the row would refuse to shrink below the intrinsic width
-		   of the native date/time inputs, and .page clips the overflow. */
+		/* As a grid item the row won't shrink below the native date/time inputs'
+		   intrinsic width, and .page clips the overflow rather than scrolling. */
 		min-width: 0;
 
 		& input[type='date'] {

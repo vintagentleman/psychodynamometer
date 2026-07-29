@@ -1,9 +1,7 @@
 import { expect, link, test, tuesdayGroup } from './fixtures.ts';
 
-// A ring only helps if it is painted. An ancestor with a non-visible overflow
-// clips whatever falls outside its box, so a control needs outline-width +
-// outline-offset of clearance on every side — or a negative offset, which draws
-// the ring inside the control where nothing can clip it.
+// An ancestor with a non-visible overflow clips whatever falls outside its box,
+// so an outward ring needs outline-width + outline-offset of clearance.
 const NEEDED = 4;
 
 const unpaintableRings = async (page: import('@playwright/test').Page) =>

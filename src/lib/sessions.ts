@@ -43,7 +43,6 @@ export function parseSession(
 	const startMinute = startH * 60 + startM;
 	const endMinute = endH * 60 + endM;
 	if (endMinute === startMinute) return null;
-	// An end before the start runs past midnight into the next day.
 	const nextDay = endMinute < startMinute;
 	const hours = (endMinute - startMinute + (nextDay ? 1440 : 0)) / 60;
 	return { date: input.date, start: input.start, end: input.end, hours, nextDay };
@@ -179,8 +178,7 @@ export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | nu
 
 export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';
 
-// Why a draft cannot round-trip through the codec, or null when it can. The
-// reason is symbolic, not a message — UI strings live in i18n.ts.
+// The reason is symbolic, not an i18n key — UI strings live in i18n.ts.
 export function encodabilityError(draft: GroupData): 'rows' | 'target' | 'count' | null {
 	const filled = draft.sessions.filter((s) => !isBlankInput(s));
 	if (filled.some((s) => parseSession(s) === null)) return 'rows';

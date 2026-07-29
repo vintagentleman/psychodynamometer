@@ -52,7 +52,6 @@ export function formatOffsetTag(ms: number, zone: string, locale: string): strin
 	return parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
 }
 
-// A session's clock range, marked "+1" when it ends on the following day.
 export function formatRange(start: string, end: string, nextDay: boolean): string {
 	return `${start}–${end}${nextDay ? ' +1' : ''}`;
 }
