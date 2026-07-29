@@ -30,8 +30,12 @@ are we, and when do we next meet?" at a glance.
 Everything lives in the URL. Group data is encoded in the hash as
 `#d=<base64url token>` — a binary blob carrying the target, the sessions and the
 title, with no readable structure by design. Progress is computed against the
-viewer's own clock, so a shared link never goes stale, and nothing is ever
-uploaded anywhere.
+viewer's own clock, so the page never falls behind the calendar: "next session"
+and past-vs-upcoming are always current, and nothing is ever uploaded anywhere.
+
+The schedule itself is a snapshot. A link records the plan as it stood when it
+was made, so changing the schedule means sharing a new link — the ones already
+sent keep showing the old plan.
 
 Dates are never rendered numerically: a `18.06` vs `18.07` mix-up once cost a
 participant a session, so that format is banned here by construction. Weekday
@@ -59,7 +63,9 @@ Open the page, fill in the group name, target hours and sessions, press **Copy
 link**, then share the link. Anyone opening it sees the current progress — past
 and upcoming sessions are computed against their clock. They can hit **Edit** to
 adjust and re-share; the address bar stays in sync as you edit. Language
-auto-detects (EN/RU) and can be toggled.
+auto-detects (EN/RU) and can be toggled. A session that runs past midnight is
+entered with an end time earlier than its start — 22:00 to 01:00 — and reads
+with a `+1` marker.
 
 The whole group is carried in the URL hash, so a link is fully self-contained:
 
