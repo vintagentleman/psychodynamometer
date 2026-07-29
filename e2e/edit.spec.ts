@@ -111,6 +111,16 @@ test.describe('copy link', () => {
 		);
 	});
 
+	test('a negative target reads as no target rather than blocking', async ({ page }) => {
+		await fillValidBuild(page);
+		await page.fill('input[name="targetHours"]', '-5');
+		// clamped to 0, which is a valid "no target" group: 3 planned hours are all over
+		await expect(page.locator('.hero-value')).toHaveText('0%');
+		await expect(page.locator('.hero')).toContainText('3 h overscheduled');
+		await page.click('#copy-link');
+		await expect(page.locator('#copy-link')).toHaveText('Copied!');
+	});
+
 	test('done with a target above the ceiling stays in edit and leaves the url alone', async ({
 		page,
 	}) => {

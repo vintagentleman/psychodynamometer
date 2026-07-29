@@ -61,7 +61,9 @@ export function readForm(): GroupData {
 	const zone = app.querySelector('#zone-select') as HTMLSelectElement | null;
 	return {
 		title: title?.value ?? '',
-		targetHours: Number(target?.value) || 0,
+		// Negative is nonsense rather than a near-limit value, and 0 already means
+		// "no target". Not written back to the input — that would fight the caret.
+		targetHours: Math.max(0, Number(target?.value) || 0),
 		timeZone: zone?.value || detectedZone(),
 		sessions,
 	};
