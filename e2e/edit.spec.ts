@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { expect, link, test, tuesdayGroup } from './fixtures.ts';
+import { expect, fullGroup, link, test, tuesdayGroup } from './fixtures.ts';
 
 const url = link(tuesdayGroup);
 
@@ -94,6 +94,35 @@ test.describe('copy link', () => {
 		await expect(page.locator('.note-copyerror')).toBeHidden();
 	});
 
+	test('a target above the ceiling blocks copy and explains why', async ({ page }) => {
+		await fillValidBuild(page);
+		await page.click('#copy-link');
+		const copied = await page.evaluate(() => navigator.clipboard.readText());
+		await page.fill('input[name="targetHours"]', '40000');
+		await page.click('#copy-link');
+		await expect(page.locator('.note-copyerror')).toContainText('up to 32,767 hours');
+		await expect(page.locator('input[name="targetHours"]')).toHaveAttribute('aria-invalid', 'true');
+		expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
+		await page.fill('input[name="targetHours"]', '10');
+		await expect(page.locator('.note-copyerror')).toBeHidden();
+		await expect(page.locator('input[name="targetHours"]')).not.toHaveAttribute(
+			'aria-invalid',
+			'true',
+		);
+	});
+
+	test('done with a target above the ceiling stays in edit and leaves the url alone', async ({
+		page,
+	}) => {
+		await fillValidBuild(page);
+		const before = page.url();
+		await page.fill('input[name="targetHours"]', '40000');
+		await page.click('#done');
+		await expect(page.locator('.page.editing')).toHaveCount(1);
+		expect(page.url()).toBe(before);
+		await expect(page.locator('.note-copyerror')).toContainText('up to 32,767 hours');
+	});
+
 	test('done exits edit, writes the url, and round-trips from view', async ({ page }) => {
 		await fillValidBuild(page);
 		await page.click('#done');
@@ -181,6 +210,17 @@ test.describe('editing a loaded group', () => {
 		await expect(page.locator('#rows .row:nth-child(2) input[name="date"]')).toHaveValue(
 			'2026-02-10',
 		);
+	});
+});
+
+test.describe('session cap', () => {
+	test('refuses a 256th row and explains why', async ({ page }) => {
+		await page.goto(link(fullGroup));
+		await page.click('#edit');
+		await expect(page.locator('#rows .row')).toHaveCount(255);
+		await page.click('#add-row');
+		await expect(page.locator('#rows .row')).toHaveCount(255);
+		await expect(page.locator('.note-copyerror')).toContainText('up to 255 sessions');
 	});
 });
 

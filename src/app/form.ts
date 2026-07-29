@@ -30,14 +30,24 @@ export function markInvalidRows() {
 	}
 }
 
-export function showBuildError(key: string) {
+export function showBuildError(key: string, params: Record<string, string | number> = {}) {
 	const note = slot(app, '.note-copyerror');
 	note.hidden = false;
-	note.textContent = t(locale, key);
+	note.textContent = t(locale, key, params);
+}
+
+// The target's invalid flag is part of the build-error presentation: set when a
+// refusal is reported, cleared with the note on the next keystroke.
+export function markTarget(invalid: boolean) {
+	const target = app.querySelector('input[name="targetHours"]');
+	if (target === null) return;
+	if (invalid) target.setAttribute('aria-invalid', 'true');
+	else target.removeAttribute('aria-invalid');
 }
 
 export function clearBuildError() {
 	slot(app, '.note-copyerror').hidden = true;
+	markTarget(false);
 }
 
 // Read the edit-mode fields back into (possibly incomplete) group data.

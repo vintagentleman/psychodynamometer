@@ -1,7 +1,16 @@
 import { t } from '../i18n.ts';
-import { encodeGroup, isBlankInput, isComplete, shareableGroup } from '../lib.ts';
+import {
+	encodabilityError,
+	encodeGroup,
+	formatHoursNum,
+	isBlankInput,
+	isComplete,
+	MAX_SESSIONS,
+	MAX_TARGET_HOURS,
+	shareableGroup,
+} from '../lib.ts';
 import type { GroupData } from '../lib/sessions.ts';
-import { markRow, readForm, readRow, showBuildError } from './form.ts';
+import { markRow, markTarget, readForm, readRow, showBuildError } from './form.ts';
 import { refreshComputed } from './render.ts';
 import { app, locale, state } from './store.ts';
 
@@ -14,6 +23,18 @@ export function syncUrl() {
 		'',
 		group ? `${location.pathname}#d=${encodeGroup(group)}` : location.pathname,
 	);
+}
+
+// Show why a draft was refused, and flag the target when it is the cause.
+export function reportError(reason: 'rows' | 'target' | 'count') {
+	markTarget(reason === 'target');
+	if (reason === 'target') {
+		showBuildError('tooManyHours', { max: formatHoursNum(MAX_TARGET_HOURS, locale) });
+	} else if (reason === 'count') {
+		showBuildError('tooManySessions', { max: String(MAX_SESSIONS) });
+	} else {
+		showBuildError('fixRows');
+	}
 }
 
 export function copyLink(copyButton: HTMLButtonElement) {
@@ -32,7 +53,12 @@ export function copyLink(copyButton: HTMLButtonElement) {
 			blocked ||= bad;
 		}
 		if (blocked) {
-			showBuildError('fixRows');
+			reportError('rows');
+			return;
+		}
+		const reason = encodabilityError(draft);
+		if (reason !== null) {
+			reportError(reason);
 			return;
 		}
 		cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };

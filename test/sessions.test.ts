@@ -1,8 +1,10 @@
 import { expect, test } from 'vitest';
 
+import { MAX_SESSIONS, MAX_TARGET_HOURS } from '../src/lib/limits.ts';
 import {
 	computeProgress,
 	cumulativePercents,
+	encodabilityError,
 	findNextSession,
 	isBlankInput,
 	isComplete,
@@ -395,4 +397,71 @@ test('sortSessionInputs sorts blank and partial rows predictably, dropping none'
 	]);
 	expect(out).toHaveLength(3);
 	expect(out.map((s) => s.date)).toEqual(['', '2026-06-01', '2026-06-02']);
+});
+
+const manyRows = (n: number) =>
+	Array.from({ length: n }, (_, i) => ({
+		date: `2026-${String(Math.floor(i / 28) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+		start: '10:00',
+		end: '11:00',
+	}));
+
+test('encodabilityError passes a clean draft', () => {
+	expect(encodabilityError(draft)).toBeNull();
+	expect(encodabilityError({ ...draft, targetHours: 0 })).toBeNull();
+});
+
+test('encodabilityError reports an unparseable non-blank row, ignoring blanks', () => {
+	expect(
+		encodabilityError({
+			...draft,
+			sessions: [...draft.sessions, { date: '2026-02-01', start: '10:00', end: '10:00' }],
+		}),
+	).toBe('rows');
+	expect(
+		encodabilityError({
+			...draft,
+			sessions: [...draft.sessions, { date: '', start: '', end: '' }],
+		}),
+	).toBeNull();
+});
+
+test('encodabilityError guards the target against the 16-bit half-hour field', () => {
+	expect(encodabilityError({ ...draft, targetHours: MAX_TARGET_HOURS })).toBeNull();
+	expect(encodabilityError({ ...draft, targetHours: MAX_TARGET_HOURS + 0.5 })).toBe('target');
+	expect(encodabilityError({ ...draft, targetHours: 40000 })).toBe('target');
+	// defensive: readForm clamps these away before they can reach here
+	expect(encodabilityError({ ...draft, targetHours: -0.5 })).toBe('target');
+	expect(encodabilityError({ ...draft, targetHours: Number.NaN })).toBe('target');
+});
+
+test('encodabilityError guards the count against the one-byte session field', () => {
+	expect(encodabilityError({ ...draft, sessions: manyRows(MAX_SESSIONS) })).toBeNull();
+	expect(encodabilityError({ ...draft, sessions: manyRows(MAX_SESSIONS + 1) })).toBe('count');
+	// blank rows are not sessions, so they do not push a full draft over the cap
+	expect(
+		encodabilityError({
+			...draft,
+			sessions: [...manyRows(MAX_SESSIONS), { date: '', start: '', end: '' }],
+		}),
+	).toBeNull();
+});
+
+test('encodabilityError reports rows before the target', () => {
+	expect(
+		encodabilityError({
+			...draft,
+			targetHours: 40000,
+			sessions: [{ date: '2026-02-01', start: '10:00', end: '10:00' }],
+		}),
+	).toBe('rows');
+});
+
+test('shareableGroup refuses a draft the codec cannot carry', () => {
+	expect(shareableGroup({ ...draft, targetHours: 40000 })).toBeNull();
+	expect(shareableGroup({ ...draft, targetHours: -5 })).toBeNull();
+	expect(shareableGroup({ ...draft, sessions: manyRows(MAX_SESSIONS + 1) })).toBeNull();
+	expect(shareableGroup({ ...draft, sessions: manyRows(MAX_SESSIONS) })?.sessions.length).toBe(
+		MAX_SESSIONS,
+	);
 });

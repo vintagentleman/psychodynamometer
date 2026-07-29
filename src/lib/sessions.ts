@@ -1,3 +1,4 @@
+import { MAX_SESSIONS, MAX_TARGET_HOURS } from './limits.ts';
 import { zonedToInstant } from './tz.ts';
 
 export type SessionInput = { date: string; start: string; end: string };
@@ -178,13 +179,24 @@ export function nowWeekIndex(buckets: WeekBucket[], nowCivil: Date): number | nu
 
 export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';
 
+// Why a draft cannot round-trip through the codec, or null when it can. The
+// reason is symbolic, not a message — UI strings live in i18n.ts.
+export function encodabilityError(draft: GroupData): 'rows' | 'target' | 'count' | null {
+	const filled = draft.sessions.filter((s) => !isBlankInput(s));
+	if (filled.some((s) => parseSession(s) === null)) return 'rows';
+	const target = draft.targetHours;
+	if (!Number.isFinite(target) || target < 0 || target > MAX_TARGET_HOURS) return 'target';
+	if (filled.length > MAX_SESSIONS) return 'count';
+	return null;
+}
+
 // Title and target are both optional — a shareable group needs only one valid session.
 export function isComplete(draft: GroupData) {
 	return parseSessions(draft.sessions, draft.timeZone).length > 0;
 }
 
 export function shareableGroup(draft: GroupData): GroupData | null {
-	if (draft.sessions.some((s) => !isBlankInput(s) && parseSession(s) === null)) return null;
+	if (encodabilityError(draft) !== null) return null;
 	const cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
 	return isComplete(cleaned) ? cleaned : null;
 }

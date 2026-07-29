@@ -1,12 +1,18 @@
 import '../style.css';
 
-import { copyLink, syncUrl } from './app/actions.ts';
+import { copyLink, reportError, syncUrl } from './app/actions.ts';
 import { sessionRow, slot } from './app/dom.ts';
 import { readForm } from './app/form.ts';
 import { refreshComputed, refreshTopbar, renderPage } from './app/render.ts';
 import { app, locale, setLocale, setState, state, storeLang } from './app/store.ts';
 import { applyTheme, pinnedTheme, pinScheme } from './app/theme.ts';
-import { decodeGroup, isBlankInput, sortSessionInputs } from './lib.ts';
+import {
+	decodeGroup,
+	encodabilityError,
+	isBlankInput,
+	MAX_SESSIONS,
+	sortSessionInputs,
+} from './lib.ts';
 
 document.documentElement.lang = locale;
 
@@ -55,8 +61,14 @@ function wireApp() {
 		}
 
 		if (target.closest('#done') !== null) {
-			syncUrl();
 			const draft = readForm();
+			const reason = encodabilityError(draft);
+			// Rows are already red and Copy explains them; these two have no other tell.
+			if (reason === 'target' || reason === 'count') {
+				reportError(reason);
+				return;
+			}
+			syncUrl();
 			setState({
 				mode: 'view',
 				data: {
@@ -70,6 +82,11 @@ function wireApp() {
 		}
 
 		if (target.closest('#add-row') !== null) {
+			// Counts rows, not sessions: the form never holds more than the codec can carry.
+			if (app.querySelectorAll('#rows .row').length >= MAX_SESSIONS) {
+				reportError('count');
+				return;
+			}
 			slot(app, '#rows').appendChild(sessionRow({ date: '', start: '', end: '' }));
 			refreshComputed();
 			return;

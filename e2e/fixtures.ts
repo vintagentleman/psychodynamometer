@@ -30,6 +30,19 @@ export type GroupInput = Parameters<typeof encodeGroup>[0];
 
 export const link = (data: GroupInput) => `/#d=${encodeGroup(data)}`;
 
+// Exactly at the wire format's one-byte session ceiling (see src/lib/limits.ts):
+// 255 one-hour sessions spread over distinct days of 2026.
+export const fullGroup: GroupInput = {
+	title: 'Full',
+	targetHours: 255,
+	timeZone: 'UTC',
+	sessions: Array.from({ length: 255 }, (_, i) => ({
+		date: `2026-${String(Math.floor(i / 28) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+		start: '10:00',
+		end: '11:00',
+	})),
+};
+
 export const tuesdayGroup: GroupInput = {
 	title: 'Tuesday Group',
 	targetHours: 41.5,

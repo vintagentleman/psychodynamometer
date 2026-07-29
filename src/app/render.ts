@@ -12,6 +12,7 @@ import {
 	formatOffsetTag,
 	formatRange,
 	formatWeekRange,
+	MAX_TARGET_HOURS,
 	nowWeekIndex,
 	parseSessions,
 	progressSegments,
@@ -222,6 +223,7 @@ function buildSubline(page: Element, targetHours: number, mode: 'view' | 'edit')
 			input.name = 'targetHours';
 			input.type = 'number';
 			input.min = '0';
+			input.max = String(MAX_TARGET_HOURS);
 			input.step = '0.5';
 			input.className = 'target-input';
 			input.setAttribute('aria-label', t(locale, 'targetHours'));
