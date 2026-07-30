@@ -66,6 +66,13 @@
 	box-sizing: border-box;
 }
 
+:where(a, button, input, select):focus-visible {
+	/* Explicit because the UA ring is near-invisible against an active toggle's
+	   dark fill. Zero specificity so a component can adjust the offset. */
+	outline: 2px solid var(--viz-done);
+	outline-offset: 2px;
+}
+
 body {
 	margin: 0;
 	padding: 16px;
@@ -184,6 +191,12 @@ button {
 		& + button {
 			border-left: 1px solid var(--border);
 		}
+
+		&:focus-visible {
+			/* The group clips to its rounded corners, so an outward ring would be
+			   invisible; this one is drawn inside the button. */
+			outline-offset: -3px;
+		}
 	}
 }
 
@@ -235,7 +248,6 @@ button {
 	}
 
 	& .title-input:focus-visible {
-		outline: none;
 		border-bottom-color: var(--viz-done);
 	}
 

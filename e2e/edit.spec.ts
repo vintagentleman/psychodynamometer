@@ -47,6 +47,16 @@ test.describe('build mode (no hash)', () => {
 		await expect(page.locator('#rows .row input[aria-invalid="true"]')).toHaveCount(0);
 	});
 
+	test('the title input keeps a visible focus ring', async ({ page }) => {
+		await page.goto('/');
+		await page.click('input[name="title"]');
+		const outline = await page.$eval(
+			'input[name="title"]',
+			(el) => getComputedStyle(el).outlineStyle,
+		);
+		expect(outline).not.toBe('none');
+	});
+
 	test('rows can be added, removed, and the last is protected', async ({ page }) => {
 		await page.goto('/');
 		await page.click('#add-row');
