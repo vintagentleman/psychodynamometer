@@ -563,6 +563,10 @@ button {
 		display: flex;
 		gap: 6px;
 
+		/* As a grid item the row would refuse to shrink below the intrinsic width
+		   of the native date/time inputs, and .page clips the overflow. */
+		min-width: 0;
+
 		& input[type='date'] {
 			flex: 1.4 1 0;
 			min-width: 0;

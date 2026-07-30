@@ -193,4 +193,22 @@ test.describe('responsive layout', () => {
 		});
 		expect(stacked).toBe(true);
 	});
+
+	// .page clips its overflow, so a row wider than the page loses its end time
+	// and remove button silently — no scrollbar, and fill() still reaches them.
+	test('every session-row control stays inside the page on mobile', async ({ page }) => {
+		await page.goto('/');
+		const escaping = await page.evaluate(() => {
+			const bounds = document.querySelector('.page')!.getBoundingClientRect();
+			return [...document.querySelectorAll('#rows .row > *')]
+				.filter((el) => {
+					const box = el.getBoundingClientRect();
+					return box.right > bounds.right + 0.5 || box.left < bounds.left - 0.5;
+				})
+				.map(
+					(el) => `${el.tagName.toLowerCase()}.${(el as HTMLInputElement).name || el.className}`,
+				);
+		});
+		expect(escaping).toEqual([]);
+	});
 });
