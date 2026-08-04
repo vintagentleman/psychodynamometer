@@ -2,7 +2,7 @@ import ICAL from 'ical.js';
 
 import type { GroupData, Session } from './sessions.ts';
 
-export type IcsOptions = { url: string; untitledSummary: string; nowMs: number };
+export type IcsOptions = { untitledSummary: string; nowMs: number };
 
 // 32-bit FNV-1a over UTF-8 bytes, base36. Deterministic UIDs let a re-import
 // update events in place instead of duplicating them.
@@ -25,12 +25,9 @@ export function buildIcs(group: GroupData, sessions: Session[], opts: IcsOptions
 		const event = new ICAL.Event(vevent);
 		event.uid = `${fnv1a36(group.title + group.timeZone + session.date + session.start + session.end)}-${index}@psychodynamometer`;
 		event.summary = group.title === '' ? opts.untitledSummary : group.title;
-		// DESCRIPTION duplicates URL because many clients never surface URL.
-		event.description = opts.url;
 		event.startDate = ICAL.Time.fromJSDate(new Date(session.startZdt.epochMilliseconds), true);
 		event.endDate = ICAL.Time.fromJSDate(new Date(session.endZdt.epochMilliseconds), true);
 		vevent.updatePropertyWithValue('dtstamp', stamp);
-		vevent.updatePropertyWithValue('url', opts.url);
 		calendar.addSubcomponent(vevent);
 	}
 	return calendar.toString();

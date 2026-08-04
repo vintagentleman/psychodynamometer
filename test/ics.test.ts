@@ -5,7 +5,7 @@ import { buildIcs, icsFilename } from '../src/lib/ics.ts';
 import { type GroupData, parseSessions } from '../src/lib/sessions.ts';
 
 const NOW = Date.UTC(2026, 6, 21, 12, 0);
-const OPTS = { url: 'https://example.test/#d=abc', untitledSummary: 'Group session', nowMs: NOW };
+const OPTS = { untitledSummary: 'Group session', nowMs: NOW };
 
 const group: GroupData = {
 	title: 'Tuesday Group',

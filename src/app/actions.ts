@@ -86,7 +86,6 @@ export async function downloadIcs() {
 	// Must stay a dynamic import — static would put ical.js in the main chunk.
 	const { buildIcs, icsFilename } = await import('../lib/ics.ts');
 	const ics = buildIcs(data, parseSessions(data.sessions, data.timeZone), {
-		url: `${location.origin}${location.pathname}#d=${encodeGroup(data)}`,
 		untitledSummary: t(locale, 'untitledEvent'),
 		nowMs: new Date().getTime(),
 	});
