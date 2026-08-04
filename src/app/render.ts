@@ -1,5 +1,6 @@
 import { messages, t } from '../i18n.ts';
 import {
+	civilDateInZone,
 	computeProgress,
 	cumulativePercents,
 	detectedZone,
@@ -15,14 +16,15 @@ import {
 	MAX_TARGET_HOURS,
 	nowWeekIndex,
 	parseSessions,
+	plainDateToLocalDate,
 	progressSegments,
 	sameLocalYmd,
 	viewerMatchesZone,
 	weeklyBuckets,
-	zonedCivilDate,
 	zoneOptions,
 } from '../lib.ts';
 import type { GroupData, Session, WeekBucket } from '../lib/sessions.ts';
+import type { PlainDate } from '../lib/temporal.ts';
 import { cloneTemplate, segment, sessionRow, slot } from './dom.ts';
 import { clearBuildError, markInvalidRows, readForm } from './form.ts';
 import { app, locale, state } from './store.ts';
@@ -61,15 +63,15 @@ function localLine(
 	viewerZone: string,
 	formatDate: (date: Date, locale: string) => string,
 ): string {
-	const localStart = new Date(session.startMs);
-	const localEnd = new Date(session.endMs);
+	const localStart = new Date(session.startZdt.epochMilliseconds);
+	const localEnd = new Date(session.endZdt.epochMilliseconds);
 	const range = formatRange(
-		formatLocalTime(session.startMs, locale),
-		formatLocalTime(session.endMs, locale),
+		formatLocalTime(session.startZdt.epochMilliseconds, locale),
+		formatLocalTime(session.endZdt.epochMilliseconds, locale),
 		!sameLocalYmd(localStart, localEnd),
 	);
-	const tag = formatOffsetTag(session.startMs, viewerZone, locale);
-	const prefix = sameLocalYmd(localStart, session.civilDate)
+	const tag = formatOffsetTag(session.startZdt.epochMilliseconds, viewerZone, locale);
+	const prefix = sameLocalYmd(localStart, plainDateToLocalDate(session.civilDate))
 		? ''
 		: `${formatDate(localStart, locale)} · `;
 	return `${prefix}${range} · ${tag}`;
@@ -81,7 +83,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	const zone = data.timeZone;
 	const viewerZone = detectedZone();
 	const nowMs = now.getTime();
-	const nowCivil = zonedCivilDate(now, zone);
+	const nowCivil = civilDateInZone(nowMs, zone);
 	const sessions = parseSessions(data.sessions, zone);
 	const { completedHours, upcomingHours, remainingHours, percent, scheduleDelta } = computeProgress(
 		sessions,
@@ -125,7 +127,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 		: t(locale, sessions.length === 0 ? 'noSessions' : 'noUpcoming');
 
 	const local = slot(page, '.next-local');
-	if (next !== null && !viewerMatchesZone(next.session.startMs, zone)) {
+	if (next !== null && !viewerMatchesZone(next.session.startZdt.epochMilliseconds, zone)) {
 		local.hidden = false;
 		local.textContent = localLine(next.session, viewerZone, formatDateLong);
 	} else {
@@ -138,7 +140,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 		fillScheduleView(page, sessions, next, nowMs, zone, viewerZone, data.targetHours);
 }
 
-function fillRhythm(page: Element, buckets: WeekBucket[], nowCivil: Date) {
+function fillRhythm(page: Element, buckets: WeekBucket[], nowCivil: PlainDate) {
 	const maxWeekHours = Math.max(...buckets.map((b) => b.doneHours + b.upcomingHours), 1);
 	const strip = slot(page, '.strip');
 	strip.replaceChildren();
@@ -192,11 +194,11 @@ function fillScheduleView(
 	for (const [index, session] of sessions.entries()) {
 		const row = cloneTemplate('tpl-session');
 		const item = row.firstElementChild as HTMLElement;
-		item.classList.toggle('past', session.endMs <= nowMs);
+		item.classList.toggle('past', session.endZdt.epochMilliseconds <= nowMs);
 		item.classList.toggle('next', next !== null && session === next.session);
 		slot(row, '.date').textContent = formatDateShort(session.civilDate, locale);
 		slot(row, '.time').textContent = formatRange(session.start, session.end, session.nextDay);
-		if (!viewerMatchesZone(session.startMs, zone)) {
+		if (!viewerMatchesZone(session.startZdt.epochMilliseconds, zone)) {
 			slot(row, '.local-time').textContent = localLine(session, viewerZone, formatDateShort);
 		}
 		const hoursText = t(locale, 'hoursShort', { hours: formatHoursNum(session.hours, locale) });

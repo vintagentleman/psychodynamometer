@@ -17,6 +17,7 @@ import {
 	weeklyBuckets,
 	weekStartOf,
 } from '../src/lib/sessions.ts';
+import { Temporal } from '../src/lib/temporal.ts';
 
 test('parseSession validates and computes wall-clock duration', () => {
 	const s = parseSession({ date: '2026-06-18', start: '19:00', end: '22:30' });
@@ -32,9 +33,23 @@ test('parseSessions hydrates instants and civil date in the group zone', () => {
 		[{ date: '2026-06-18', start: '19:00', end: '22:30' }],
 		'Europe/Moscow',
 	);
-	expect(s.startMs).toBe(Date.UTC(2026, 5, 18, 16, 0));
-	expect(s.endMs).toBe(Date.UTC(2026, 5, 18, 19, 30));
-	expect(s.civilDate).toEqual(new Date(2026, 5, 18));
+	expect(s.startZdt.epochMilliseconds).toBe(Date.UTC(2026, 5, 18, 16, 0));
+	expect(s.endZdt.epochMilliseconds).toBe(Date.UTC(2026, 5, 18, 19, 30));
+	expect(s.civilDate.toString()).toBe('2026-06-18');
+});
+
+test('instants are correct on both sides of a DST transition', () => {
+	// Europe/London springs forward 2026-03-29 01:00 GMT -> 02:00 BST
+	const [gmt] = parseSessions(
+		[{ date: '2026-03-29', start: '00:30', end: '01:00' }],
+		'Europe/London',
+	);
+	expect(gmt.startZdt.epochMilliseconds).toBe(Date.UTC(2026, 2, 29, 0, 30));
+	const [bst] = parseSessions(
+		[{ date: '2026-03-29', start: '03:00', end: '04:00' }],
+		'Europe/London',
+	);
+	expect(bst.startZdt.epochMilliseconds).toBe(Date.UTC(2026, 2, 29, 2, 0));
 });
 
 test('parseSession rejects a zero-length session and garbage', () => {
@@ -58,16 +73,16 @@ test('parseSession marks a same-day session nextDay false', () => {
 
 test('parseSessions puts an overnight end on the following calendar day', () => {
 	const [s] = parseSessions([{ date: '2026-06-18', start: '22:00', end: '01:00' }], 'UTC');
-	expect(s.startMs).toBe(Date.UTC(2026, 5, 18, 22, 0));
-	expect(s.endMs).toBe(Date.UTC(2026, 5, 19, 1, 0));
-	expect(s.civilDate).toEqual(new Date(2026, 5, 18)); // civilDate is the start date
+	expect(s.startZdt.epochMilliseconds).toBe(Date.UTC(2026, 5, 18, 22, 0));
+	expect(s.endZdt.epochMilliseconds).toBe(Date.UTC(2026, 5, 19, 1, 0));
+	expect(s.civilDate.toString()).toBe('2026-06-18'); // civilDate is the start date
 });
 
 test('parseSessions rolls an overnight end over a month and a year boundary', () => {
 	const [aug] = parseSessions([{ date: '2026-08-31', start: '22:00', end: '01:00' }], 'UTC');
-	expect(aug.endMs).toBe(Date.UTC(2026, 8, 1, 1, 0));
+	expect(aug.endZdt.epochMilliseconds).toBe(Date.UTC(2026, 8, 1, 1, 0));
 	const [dec] = parseSessions([{ date: '2026-12-31', start: '22:00', end: '01:00' }], 'UTC');
-	expect(dec.endMs).toBe(Date.UTC(2027, 0, 1, 1, 0));
+	expect(dec.endZdt.epochMilliseconds).toBe(Date.UTC(2027, 0, 1, 1, 0));
 });
 
 test('an overnight session spanning a DST transition keeps its wall-clock hours', () => {
@@ -78,7 +93,7 @@ test('an overnight session spanning a DST transition keeps its wall-clock hours'
 		'Europe/Berlin',
 	);
 	expect(s.hours).toBe(4);
-	expect(s.endMs - s.startMs).toBe(3 * 3_600_000);
+	expect(s.endZdt.epochMilliseconds - s.startZdt.epochMilliseconds).toBe(3 * 3_600_000);
 });
 
 test('weeklyBuckets counts an overnight session in the week it began', () => {
@@ -86,7 +101,7 @@ test('weeklyBuckets counts an overnight session in the week it began', () => {
 	const sessions = parseSessions([{ date: '2026-06-21', start: '22:00', end: '01:00' }], 'UTC');
 	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 1)); // now: before the session
 	expect(buckets).toHaveLength(1);
-	expect(buckets[0].weekStart).toEqual(new Date(2026, 5, 15)); // Monday of that week
+	expect(buckets[0].weekStart.toString()).toBe('2026-06-15'); // Monday of that week
 	expect(buckets[0].upcomingHours).toBe(3);
 });
 
@@ -236,9 +251,10 @@ test('findNextSession returns null when everything ended or list is empty', () =
 });
 
 test('weekStartOf snaps to Monday', () => {
-	expect(weekStartOf(new Date(2026, 5, 18))).toEqual(new Date(2026, 5, 15)); // Thu -> Mon
-	expect(weekStartOf(new Date(2026, 5, 21))).toEqual(new Date(2026, 5, 15)); // Sun -> Mon
-	expect(weekStartOf(new Date(2026, 5, 15))).toEqual(new Date(2026, 5, 15)); // Mon stays
+	const monday = (d: string) => weekStartOf(Temporal.PlainDate.from(d)).toString();
+	expect(monday('2026-06-18')).toBe('2026-06-15'); // Thu -> Mon
+	expect(monday('2026-06-21')).toBe('2026-06-15'); // Sun -> Mon
+	expect(monday('2026-06-15')).toBe('2026-06-15'); // Mon stays
 });
 
 // Jun 2 (Tue, wk of Jun 1) + Jun 18 (Thu, wk of Jun 15), seen Wed Jun 10 —
@@ -261,9 +277,9 @@ test('weeklyBuckets spans first..last week, keeps empty weeks, splits by now', (
 		[0, 0],
 		[0, 4],
 	]);
-	expect(juneWeeks[0].weekStart).toEqual(new Date(2026, 5, 1));
-	expect(juneWeeks[1].weekStart).toEqual(new Date(2026, 5, 8));
-	expect(juneWeeks[2].weekStart).toEqual(new Date(2026, 5, 15));
+	expect(juneWeeks[0].weekStart.toString()).toBe('2026-06-01');
+	expect(juneWeeks[1].weekStart.toString()).toBe('2026-06-08');
+	expect(juneWeeks[2].weekStart.toString()).toBe('2026-06-15');
 });
 
 test('weeklyBuckets splits a week that straddles now into both segments', () => {
@@ -299,15 +315,15 @@ test('weeklyBuckets keys weeks by the group-zone civil date, not the viewer', ()
 	);
 	const buckets = weeklyBuckets(sessions, Date.UTC(2026, 5, 1)); // before it -> upcoming
 	expect(buckets.length).toBe(1);
-	expect(buckets[0].weekStart).toEqual(new Date(2026, 5, 8)); // Mon of the week of Sun Jun 14
+	expect(buckets[0].weekStart.toString()).toBe('2026-06-08'); // Mon of the week of Sun Jun 14
 	expect([buckets[0].doneHours, buckets[0].upcomingHours]).toEqual([0, 2]);
 });
 
 test('nowWeekIndex finds the bucket that contains now, else null', () => {
-	expect(nowWeekIndex(juneWeeks, new Date(2026, 5, 10))).toBe(1);
-	expect(nowWeekIndex(juneWeeks, new Date(2026, 4, 1))).toBeNull();
-	expect(nowWeekIndex(juneWeeks, new Date(2026, 7, 1))).toBeNull();
-	expect(nowWeekIndex([], new Date(2026, 5, 10))).toBeNull();
+	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-06-10'))).toBe(1);
+	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-05-01'))).toBeNull();
+	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-08-01'))).toBeNull();
+	expect(nowWeekIndex([], Temporal.PlainDate.from('2026-06-10'))).toBeNull();
 });
 
 const draft = {

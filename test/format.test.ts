@@ -10,6 +10,7 @@ import {
 	formatRange,
 	formatWeekRange,
 } from '../src/lib/format.ts';
+import { Temporal } from '../src/lib/temporal.ts';
 
 test('dates render spelled out, never numeric-ambiguous', () => {
 	const thu = new Date(2026, 5, 18);
@@ -18,15 +19,18 @@ test('dates render spelled out, never numeric-ambiguous', () => {
 	const jul = new Date(2026, 6, 23);
 	expect(formatDateLong(jul, 'en')).toBe('Thursday 23 July');
 	expect(formatDateLong(jul, 'ru')).toBe('четверг, 23 июля');
-	expect(formatMonth(thu, 'en')).toBe('Jun');
+	expect(formatMonth(Temporal.PlainDate.from('2026-06-18'), 'en')).toBe('Jun');
+	// the Date | PlainDate union renders identically from either shape
+	expect(formatDateShort(Temporal.PlainDate.from('2026-06-18'), 'en')).toBe('Thu 18 Jun');
+	expect(formatDateLong(Temporal.PlainDate.from('2026-07-23'), 'en')).toBe('Thursday 23 July');
 });
 
 test('week ranges span monday to sunday, localised', () => {
-	expect(formatWeekRange(new Date(2026, 7, 17), 'en')).toBe('17 – 23 Aug');
-	expect(formatWeekRange(new Date(2026, 7, 17), 'ru')).toBe('17–23 авг.');
+	expect(formatWeekRange(Temporal.PlainDate.from('2026-08-17'), 'en')).toBe('17 – 23 Aug');
+	expect(formatWeekRange(Temporal.PlainDate.from('2026-08-17'), 'ru')).toBe('17–23 авг.');
 	// a week crossing a month boundary names both months
-	expect(formatWeekRange(new Date(2026, 5, 29), 'en')).toBe('29 Jun – 5 Jul');
-	expect(formatWeekRange(new Date(2026, 5, 29), 'ru')).toBe('29 июн. – 5 июл.');
+	expect(formatWeekRange(Temporal.PlainDate.from('2026-06-29'), 'en')).toBe('29 Jun – 5 Jul');
+	expect(formatWeekRange(Temporal.PlainDate.from('2026-06-29'), 'ru')).toBe('29 июн. – 5 июл.');
 });
 
 test('hours localise decimal separators', () => {

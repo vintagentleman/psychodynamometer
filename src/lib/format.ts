@@ -1,34 +1,46 @@
+import type { PlainDate } from './temporal.ts';
+
 const DATE_LOCALES: Record<string, string> = { en: 'en-GB', ru: 'ru' };
 
-export function formatDateShort(date: Date, locale: string) {
+// A civil date as a legacy Date at viewer-local midnight — the shape Intl wants.
+export function plainDateToLocalDate(date: PlainDate): Date {
+	return new Date(date.year, date.month - 1, date.day);
+}
+
+// localLine passes viewer-local legacy Dates; schedule rows pass civil PlainDates.
+const toDate = (date: Date | PlainDate) =>
+	date instanceof Date ? date : plainDateToLocalDate(date);
+
+export function formatDateShort(date: Date | PlainDate, locale: string) {
 	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short',
-	}).format(date);
+	}).format(toDate(date));
 }
 
-export function formatDateLong(date: Date, locale: string) {
+export function formatDateLong(date: Date | PlainDate, locale: string) {
 	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
 		weekday: 'long',
 		day: 'numeric',
 		month: 'long',
-	}).format(date);
+	}).format(toDate(date));
 }
 
-export function formatMonth(date: Date, locale: string) {
-	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, { month: 'short' }).format(date);
+export function formatMonth(date: PlainDate, locale: string) {
+	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, { month: 'short' }).format(
+		plainDateToLocalDate(date),
+	);
 }
 
 // Monday-to-Sunday range of the week starting at weekStart, e.g. "17 – 23 Aug".
-export function formatWeekRange(weekStart: Date, locale: string) {
-	const weekEnd = new Date(weekStart);
-	weekEnd.setDate(weekEnd.getDate() + 6);
+export function formatWeekRange(weekStart: PlainDate, locale: string) {
+	const weekEnd = weekStart.add({ days: 6 });
 	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
 		day: 'numeric',
 		month: 'short',
 	})
-		.formatRange(weekStart, weekEnd)
+		.formatRange(plainDateToLocalDate(weekStart), plainDateToLocalDate(weekEnd))
 		.replace(/\s/g, ' '); // ICU emits narrow no-break spaces; engines disagree
 }
 
