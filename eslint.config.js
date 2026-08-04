@@ -30,6 +30,15 @@ export default [
 		rules: {
 			'simple-import-sort/imports': 'error',
 			'simple-import-sort/exports': 'error',
+			'no-restricted-properties': [
+				'error',
+				{
+					object: 'Temporal',
+					property: 'Now',
+					message:
+						'Now flows in as a nowMs parameter; Temporal.Now would dodge the frozen e2e clock.',
+				},
+			],
 		},
 	},
 	{ ignores: ['.superpowers/', 'dist/'] },
