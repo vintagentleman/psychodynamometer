@@ -34,8 +34,7 @@ link, while the ones already sent keep showing the old plan.
 
 ## Development
 
-Vite + TypeScript, no framework. The single runtime dependency is a Temporal
-polyfill, lazy-loaded only where the engine lacks native support.
+Vite + TypeScript, no framework.
 
 ```bash
 npm run check        # the gate: typecheck + lint + format check + tests + build
