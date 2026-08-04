@@ -314,6 +314,14 @@ export function renderPage() {
 		calBtn.textContent = t(locale, 'addToCalendar');
 		actionButtons.push(calBtn);
 	}
+	if (mode === 'view' && typeof navigator.share === 'function') {
+		const shareBtn = document.createElement('button');
+		shareBtn.type = 'button';
+		shareBtn.className = 'ghost';
+		shareBtn.id = 'share-link';
+		shareBtn.textContent = t(locale, 'shareLink');
+		actionButtons.push(shareBtn);
+	}
 	const toggle = document.createElement('button');
 	toggle.type = 'button';
 	toggle.className = 'ghost';

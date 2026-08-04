@@ -97,3 +97,11 @@ export async function downloadIcs() {
 	a.click();
 	URL.revokeObjectURL(href);
 }
+
+export function shareLink() {
+	if (typeof navigator.share !== 'function') return;
+	if (state.mode !== 'view' || state.data === null) return;
+	const url = `${location.origin}${location.pathname}#d=${encodeGroup(state.data)}`;
+	// A dismissed share sheet rejects with AbortError; there is nothing to report.
+	navigator.share({ title: state.data.title, url }).catch(() => {});
+}

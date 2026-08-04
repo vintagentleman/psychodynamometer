@@ -20,4 +20,10 @@ test.describe('calendar export', () => {
 		await expect(page.locator('#copy-link')).toBeVisible();
 		await expect(page.locator('#download-ics')).toHaveCount(0);
 	});
+
+	test('share button is absent where navigator.share is missing', async ({ page }) => {
+		await page.goto(link(tuesdayGroup));
+		await expect(page.locator('#download-ics')).toBeVisible();
+		await expect(page.locator('#share-link')).toHaveCount(0);
+	});
 });
