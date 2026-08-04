@@ -48,6 +48,7 @@
 		"vitest": "^4.1.10"
 	},
 	"dependencies": {
+		"ical.js": "^2.2.1",
 		"temporal-polyfill": "^1.0.3"
 	}
 }

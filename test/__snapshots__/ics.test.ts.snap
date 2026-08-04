@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildIcs > matches the pinned serialization 1`] = `
+"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//psychodynamometer//EN
+BEGIN:VEVENT
+UID:1yd16i2-0@psychodynamometer
+SUMMARY:Tuesday Group
+DESCRIPTION:https://example.test/#d=abc
+DTSTART:20260602T190000Z
+DTEND:20260602T223000Z
+DTSTAMP:20260721T120000Z
+URL:https://example.test/#d=abc
+END:VEVENT
+BEGIN:VEVENT
+UID:1siuj9k-1@psychodynamometer
+SUMMARY:Tuesday Group
+DESCRIPTION:https://example.test/#d=abc
+DTSTART:20260630T230000Z
+DTEND:20260701T010000Z
+DTSTAMP:20260721T120000Z
+URL:https://example.test/#d=abc
+END:VEVENT
+END:VCALENDAR"
+`;
