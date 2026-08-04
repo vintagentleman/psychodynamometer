@@ -305,6 +305,15 @@ export function renderPage() {
 	copyBtn.type = 'button';
 	copyBtn.id = 'copy-link';
 	copyBtn.textContent = t(locale, 'copyLink');
+	const actionButtons = [copyBtn];
+	if (mode === 'view' && data.sessions.length > 0) {
+		const calBtn = document.createElement('button');
+		calBtn.type = 'button';
+		calBtn.className = 'ghost';
+		calBtn.id = 'download-ics';
+		calBtn.textContent = t(locale, 'addToCalendar');
+		actionButtons.push(calBtn);
+	}
 	const toggle = document.createElement('button');
 	toggle.type = 'button';
 	toggle.className = 'ghost';
@@ -315,7 +324,7 @@ export function renderPage() {
 		toggle.id = 'done';
 		toggle.textContent = t(locale, 'doneEditing');
 	}
-	slot(page, '.page-actions').prepend(copyBtn, toggle);
+	slot(page, '.page-actions').prepend(...actionButtons, toggle);
 
 	if (mode === 'edit' && state.badLink) slot(page, '.note-badlink').hidden = false;
 

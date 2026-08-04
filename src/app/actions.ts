@@ -7,6 +7,7 @@ import {
 	isComplete,
 	MAX_SESSIONS,
 	MAX_TARGET_HOURS,
+	parseSessions,
 	shareableGroup,
 } from '../lib.ts';
 import type { GroupData } from '../lib/sessions.ts';
@@ -77,4 +78,22 @@ export function copyLink(copyButton: HTMLButtonElement) {
 			}, 1500);
 		})
 		.catch(() => showBuildError('copyFailed'));
+}
+
+export async function downloadIcs() {
+	if (state.mode !== 'view' || state.data === null) return;
+	const data = state.data;
+	// Must stay a dynamic import — static would put ical.js in the main chunk.
+	const { buildIcs, icsFilename } = await import('../lib/ics.ts');
+	const ics = buildIcs(data, parseSessions(data.sessions, data.timeZone), {
+		url: `${location.origin}${location.pathname}#d=${encodeGroup(data)}`,
+		untitledSummary: t(locale, 'untitledEvent'),
+		nowMs: new Date().getTime(),
+	});
+	const href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+	const a = document.createElement('a');
+	a.href = href;
+	a.download = `${icsFilename(data.title)}.ics`;
+	a.click();
+	URL.revokeObjectURL(href);
 }

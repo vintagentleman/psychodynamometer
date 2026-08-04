@@ -1,6 +1,6 @@
 import '../style.css';
 
-import { copyLink, reportError, syncUrl } from './app/actions.ts';
+import { copyLink, downloadIcs, reportError, syncUrl } from './app/actions.ts';
 import { sessionRow, slot } from './app/dom.ts';
 import { readForm } from './app/form.ts';
 import { refreshComputed, refreshTopbar, renderPage } from './app/render.ts';
@@ -42,6 +42,12 @@ function wireApp() {
 		const copyButton = target.closest('#copy-link');
 		if (copyButton !== null) {
 			copyLink(copyButton as HTMLButtonElement);
+			return;
+		}
+
+		const downloadButton = target.closest('#download-ics');
+		if (downloadButton !== null) {
+			void downloadIcs();
 			return;
 		}
 
