@@ -4,8 +4,7 @@ import type { GroupData, Session } from './sessions.ts';
 
 export type IcsOptions = { untitledSummary: string; nowMs: number };
 
-// 32-bit FNV-1a over UTF-8 bytes, base36. Deterministic UIDs let a re-import
-// update events in place instead of duplicating them.
+// Deterministic UIDs let a re-import update events in place instead of duplicating.
 function fnv1a36(input: string): string {
 	let hash = 0x811c9dc5;
 	for (const byte of new TextEncoder().encode(input)) {
@@ -20,10 +19,15 @@ export function buildIcs(group: GroupData, sessions: Session[], opts: IcsOptions
 	calendar.updatePropertyWithValue('version', '2.0');
 	calendar.updatePropertyWithValue('prodid', '-//psychodynamometer//EN');
 	const stamp = ICAL.Time.fromJSDate(new Date(opts.nowMs), true);
-	for (const [index, session] of sessions.entries()) {
+	// UID suffix = duplicate count; a positional index would shift every later UID on edit.
+	const seen = new Map<string, number>();
+	for (const session of sessions) {
+		const hash = fnv1a36(group.title + group.timeZone + session.date + session.start + session.end);
+		const occurrence = seen.get(hash) ?? 0;
+		seen.set(hash, occurrence + 1);
 		const vevent = new ICAL.Component('vevent');
 		const event = new ICAL.Event(vevent);
-		event.uid = `${fnv1a36(group.title + group.timeZone + session.date + session.start + session.end)}-${index}@psychodynamometer`;
+		event.uid = `${hash}-${occurrence}@psychodynamometer`;
 		event.summary = group.title === '' ? opts.untitledSummary : group.title;
 		event.startDate = ICAL.Time.fromJSDate(new Date(session.startZdt.epochMilliseconds), true);
 		event.endDate = ICAL.Time.fromJSDate(new Date(session.endZdt.epochMilliseconds), true);

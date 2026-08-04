@@ -65,6 +65,23 @@ describe('buildIcs', () => {
 		expect(parseEvents(build(group))[0].uid).toMatch(/^[0-9a-z]+-0@psychodynamometer$/);
 	});
 
+	it('keeps UIDs stable when an earlier session is added', () => {
+		const before = parseEvents(build(group));
+		const grown = {
+			...group,
+			sessions: [{ date: '2026-05-01', start: '10:00', end: '11:00' }, ...group.sessions],
+		};
+		const after = parseEvents(build(grown));
+		expect(after[1].uid).toBe(before[0].uid);
+		expect(after[2].uid).toBe(before[1].uid);
+	});
+
+	it('distinguishes identical duplicate sessions', () => {
+		const doubled = { ...group, sessions: [group.sessions[0], group.sessions[0]] };
+		const uids = parseEvents(build(doubled)).map((e) => e.uid);
+		expect(new Set(uids).size).toBe(2);
+	});
+
 	it('matches the pinned serialization', () => {
 		expect(build(group)).toMatchSnapshot();
 	});
