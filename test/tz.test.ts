@@ -1,12 +1,24 @@
 import { expect, test } from 'vitest';
 
 import {
+	civilDateInZone,
 	sameLocalYmd,
 	viewerMatchesZone,
 	zonedCivilDate,
 	zonedToInstant,
 	zoneOptions,
 } from '../src/lib/tz.ts';
+
+test('civilDateInZone expresses an instant as the group-zone civil date', () => {
+	// 20:00 UTC on Jun 14 is 23:00 Moscow (same day)
+	expect(civilDateInZone(Date.UTC(2026, 5, 14, 20, 0), 'Europe/Moscow').toString()).toBe(
+		'2026-06-14',
+	);
+	// 22:00 UTC on Jun 14 is 01:00 Moscow the next day
+	expect(civilDateInZone(Date.UTC(2026, 5, 14, 22, 0), 'Europe/Moscow').toString()).toBe(
+		'2026-06-15',
+	);
+});
 
 test('zonedToInstant maps wall-clock in a zone to a UTC instant (machine-TZ-independent)', () => {
 	// asserted against Date.UTC(...), so these hold under any host TZ

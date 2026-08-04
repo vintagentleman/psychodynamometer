@@ -1,3 +1,17 @@
+import { type PlainDate, Temporal } from './temporal.ts';
+
+// Offset (whole minutes, east-of-UTC positive) that `zone` is at the given instant.
+// Whole minutes: a second-aligned zone would otherwise leak "GMT+02:59.99" labels.
+function offsetMinutes(utcMs: number, zone: string): number {
+	const zdt = Temporal.Instant.fromEpochMilliseconds(utcMs).toZonedDateTimeISO(zone);
+	return Math.round(zdt.offsetNanoseconds / 60_000_000_000);
+}
+
+// The instant `ms` as its civil date in `zone`.
+export function civilDateInZone(ms: number, zone: string): PlainDate {
+	return Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO(zone).toPlainDate();
+}
+
 // Offset (ms, east-of-UTC positive) that `zone` was at the given UTC instant.
 function zoneOffsetMs(utcMs: number, zone: string): number {
 	const parts = new Intl.DateTimeFormat('en-US', {
@@ -43,7 +57,7 @@ export function zonedCivilDate(now: Date, zone: string): Date {
 // True when the viewer's local offset equals `zone`'s at `ms` — then no
 // separate local-time line is needed.
 export function viewerMatchesZone(ms: number, zone: string): boolean {
-	return zoneOffsetMs(ms, zone) === -new Date(ms).getTimezoneOffset() * 60000;
+	return offsetMinutes(ms, zone) === offsetMinutes(ms, detectedZone());
 }
 
 // True when two dates fall on the same local calendar day.
@@ -70,9 +84,7 @@ function padOffset(minutes: number): string {
 export function zoneOptions(nowMs: number): { value: string; label: string }[] {
 	return Intl.supportedValuesOf('timeZone')
 		.map((zone) => {
-			// Round to whole minutes: zoneOffsetMs is second-aligned, so a nowMs
-			// carrying milliseconds would otherwise yield e.g. 179.9996 → "GMT+02:59.99".
-			const offset = Math.round(zoneOffsetMs(nowMs, zone) / 60000);
+			const offset = offsetMinutes(nowMs, zone);
 			return { value: zone, label: `(${padOffset(offset)}) ${zone}`, offset };
 		})
 		.sort((a, b) => a.offset - b.offset || a.value.localeCompare(b.value))
