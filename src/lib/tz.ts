@@ -7,7 +7,6 @@ function offsetMinutes(utcMs: number, zone: string): number {
 	return Math.round(zdt.offsetNanoseconds / 60_000_000_000);
 }
 
-// The instant `ms` as its civil date in `zone`.
 export function civilDateInZone(ms: number, zone: string): PlainDate {
 	return Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO(zone).toPlainDate();
 }

@@ -20,9 +20,8 @@ export type WeekBucket = { weekStart: PlainDate; doneHours: number; upcomingHour
 const byStart = (a: Session, b: Session) =>
 	a.startZdt.epochMilliseconds - b.startZdt.epochMilliseconds;
 
-// The exact <input type=date> / <input type=time> shapes — Temporal's ISO
-// parser is laxer (basic format, datetime strings) and must not widen what
-// the form and codec can produce.
+// Temporal's ISO parser is laxer (basic format, datetime strings) than the
+// <input type=date>/<input type=time> shapes the form and codec produce.
 const DATE_SHAPE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_SHAPE = /^\d{2}:\d{2}$/;
 

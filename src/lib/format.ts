@@ -7,7 +7,6 @@ export function plainDateToLocalDate(date: PlainDate): Date {
 	return new Date(date.year, date.month - 1, date.day);
 }
 
-// localLine passes viewer-local legacy Dates; schedule rows pass civil PlainDates.
 const toDate = (date: Date | PlainDate) =>
 	date instanceof Date ? date : plainDateToLocalDate(date);
 
