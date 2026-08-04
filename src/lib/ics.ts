@@ -21,14 +21,15 @@ export function buildIcs(group: GroupData, sessions: Session[], opts: IcsOptions
 	const stamp = ICAL.Time.fromJSDate(new Date(opts.nowMs), true);
 	// UID suffix = duplicate count; a positional index would shift every later UID on edit.
 	const seen = new Map<string, number>();
-	for (const session of sessions) {
+	for (const [index, session] of sessions.entries()) {
 		const hash = fnv1a36(group.title + group.timeZone + session.date + session.start + session.end);
 		const occurrence = seen.get(hash) ?? 0;
 		seen.set(hash, occurrence + 1);
 		const vevent = new ICAL.Component('vevent');
 		const event = new ICAL.Event(vevent);
 		event.uid = `${hash}-${occurrence}@psychodynamometer`;
-		event.summary = group.title === '' ? opts.untitledSummary : group.title;
+		const title = group.title === '' ? opts.untitledSummary : group.title;
+		event.summary = `${title} — ${index + 1}/${sessions.length}`;
 		event.startDate = ICAL.Time.fromJSDate(new Date(session.startZdt.epochMilliseconds), true);
 		event.endDate = ICAL.Time.fromJSDate(new Date(session.endZdt.epochMilliseconds), true);
 		vevent.updatePropertyWithValue('dtstamp', stamp);

@@ -13,6 +13,7 @@ test.describe('calendar export', () => {
 		await expect(page.locator('.session')).toHaveCount(11);
 		expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(11);
 		expect(ics).toContain('DTSTART:20260602T190000Z');
+		expect(ics).toContain('SUMMARY:Tuesday Group — 1/11');
 	});
 
 	test('offers no export when the group has no sessions', async ({ page }) => {

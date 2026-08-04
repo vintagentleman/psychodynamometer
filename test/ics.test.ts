@@ -46,18 +46,23 @@ describe('buildIcs', () => {
 		expect(dtstamp.toUnixTime()).toBe(NOW / 1000);
 	});
 
+	it('numbers each event within the schedule', () => {
+		const summaries = parseEvents(build(group)).map((e) => e.summary);
+		expect(summaries).toEqual(['Tuesday Group — 1/2', 'Tuesday Group — 2/2']);
+	});
+
 	it('round-trips a hostile title as literal text', () => {
 		const title = 'Группа, "долгая"; \\ тест\nстрока';
-		expect(parseEvents(build({ ...group, title }))[0].summary).toBe(title);
+		expect(parseEvents(build({ ...group, title }))[0].summary).toBe(`${title} — 1/2`);
 	});
 
 	it('round-trips a long Cyrillic title through folding', () => {
 		const title = 'Группа продолжительной психодинамической терапии и поддержки, набор второй';
-		expect(parseEvents(build({ ...group, title }))[0].summary).toBe(title);
+		expect(parseEvents(build({ ...group, title }))[0].summary).toBe(`${title} — 1/2`);
 	});
 
 	it('falls back to the untitled summary', () => {
-		expect(parseEvents(build({ ...group, title: '' }))[0].summary).toBe('Group session');
+		expect(parseEvents(build({ ...group, title: '' }))[0].summary).toBe('Group session — 1/2');
 	});
 
 	it('derives deterministic UIDs', () => {
