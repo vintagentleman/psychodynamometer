@@ -22,6 +22,10 @@ export default [
 		languageOptions: { globals: { ...globals.node, ...globals.browser } },
 	},
 	{
+		files: ['src/sw.ts'],
+		languageOptions: { globals: { ...globals.serviceworker } },
+	},
+	{
 		files: ['playwright.config.ts'],
 		languageOptions: { globals: { ...globals.node } },
 	},

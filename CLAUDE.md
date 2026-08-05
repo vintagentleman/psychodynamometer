@@ -37,6 +37,9 @@ minifies CSS.
   UI strings only in `src/i18n.ts` (en + ru, same key sets). Package imports
   in `src/lib/` are allowed only where the dependency rule above sanctions
   them.
+- `src/sw.ts` is the service worker: worker-scope, import-free, type-checked
+  by `tsconfig.sw.json` (the main tsconfig excludes it), emitted unhashed as
+  `sw.js`; `vite.config.ts` injects its precache manifest at build time.
 - Group data is encoded in the URL hash as `#d=<base64url token>`. The token
   is a binary blob — format marker, target in half-hours, session count, zone,
   one 5-byte record per session (packed date + start/end minute-of-day), then
