@@ -194,6 +194,35 @@ test.describe('responsive layout', () => {
 		expect(stacked).toBe(true);
 	});
 
+	test.describe('narrow phone', () => {
+		test.use({ viewport: { width: 360, height: 900 } });
+
+		test('session rows stack the date over the time and hours', async ({ page }) => {
+			await page.goto(url);
+			const rows = await page.evaluate(() =>
+				[...document.querySelectorAll('.session')].map((row) => {
+					const main = row.querySelector('.session-main')!;
+					const date = row.querySelector('.date')!.getBoundingClientRect();
+					const time = row.querySelector('.time')!.getBoundingClientRect();
+					const hours = row.querySelector('.hours')!.getBoundingClientRect();
+					const gap = time.top - date.bottom;
+					return {
+						fits: main.scrollWidth <= main.clientWidth,
+						timeTightlyBelowDate: gap >= -1 && gap <= 6,
+						timeAlignedWithDate: Math.abs(time.left - date.left) <= 1,
+						hoursBesideTime: Math.abs(hours.top - time.top) <= 1,
+					};
+				}),
+			);
+			expect(rows).toHaveLength(11);
+			expect(
+				rows.filter(
+					(r) => !r.fits || !r.timeTightlyBelowDate || !r.timeAlignedWithDate || !r.hoursBesideTime,
+				),
+			).toEqual([]);
+		});
+	});
+
 	// .page clips its overflow, so a row wider than the page loses its end time
 	// and remove button silently — no scrollbar, and fill() still reaches them.
 	test('every session-row control stays inside the page on mobile', async ({ page }) => {

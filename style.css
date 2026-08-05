@@ -511,10 +511,21 @@ button {
 			align-items: baseline;
 			gap: 10px;
 			white-space: nowrap;
+
+			/* A session row needs ~420px of viewport for date + time + hours on one line. */
+
+			@media (width < 420px) {
+				flex-wrap: wrap;
+				row-gap: 2px;
+			}
 		}
 
 		& .date {
 			min-width: 110px;
+
+			@media (width < 420px) {
+				flex-basis: 100%;
+			}
 		}
 
 		& .hours {
