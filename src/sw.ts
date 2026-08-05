@@ -35,7 +35,8 @@ sw.addEventListener('activate', (event) => {
 // The global caches.match could cross versions mid-update; match only this cache.
 async function fromCache(request: Request | string): Promise<Response | undefined> {
 	const cache = await caches.open(CACHE);
-	return cache.match(request);
+	// The cache holds one response per URL; Vary-aware matching would only produce false misses.
+	return cache.match(request, { ignoreVary: true });
 }
 
 sw.addEventListener('fetch', (event) => {

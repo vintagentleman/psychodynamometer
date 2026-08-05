@@ -145,3 +145,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
 });
 wireApp();
 route();
+
+// Relative keeps the Pages subpath in scope; the dev server builds no sw.js, hence PROD.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+	void navigator.serviceWorker.register('sw.js');
+}
