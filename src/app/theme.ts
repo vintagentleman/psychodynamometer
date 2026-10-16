@@ -1,13 +1,11 @@
-const KEY = 'theme';
+import { writeStored } from './store.ts';
 
-// The user's pinned scheme, or null when following the system.
+// The user's pinned scheme, or null when following the system. Read from the
+// class, not storage: blocked storage must not hide a pin made this session.
 export function pinnedTheme(): 'light' | 'dark' | null {
-	try {
-		const v = localStorage.getItem(KEY);
-		return v === 'light' || v === 'dark' ? v : null;
-	} catch {
-		return null;
-	}
+	const { classList } = document.documentElement;
+	if (classList.contains('theme-dark')) return 'dark';
+	return classList.contains('theme-light') ? 'light' : null;
 }
 
 // What the pin toggle switches to: the pinned scheme, or the opposite of the
@@ -25,10 +23,5 @@ export function applyTheme(theme: 'light' | 'dark' | null) {
 	document
 		.querySelector('meta[name="color-scheme"]')
 		?.setAttribute('content', theme ?? 'light dark');
-	try {
-		if (theme) localStorage.setItem(KEY, theme);
-		else localStorage.removeItem(KEY);
-	} catch {
-		/* storage blocked — the class still themes this session */
-	}
+	writeStored('theme', theme);
 }

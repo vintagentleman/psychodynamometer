@@ -4,7 +4,7 @@ import { copyLink, downloadIcs, reportError, shareLink, syncUrl } from './app/ac
 import { sessionRow, slot } from './app/dom.ts';
 import { readForm } from './app/form.ts';
 import { refreshComputed, refreshTopbar, renderPage } from './app/render.ts';
-import { app, locale, setLocale, setState, state, storeLang } from './app/store.ts';
+import { app, locale, setLocale, setState, state, writeStored } from './app/store.ts';
 import { applyTheme, pinnedTheme, pinScheme } from './app/theme.ts';
 import {
 	decodeGroup,
@@ -32,7 +32,7 @@ function wireApp() {
 			const lang = (langButton as HTMLElement).dataset.lang;
 			if (lang !== 'en' && lang !== 'ru') return;
 			setLocale(lang);
-			storeLang(lang);
+			writeStored('lang', lang);
 			document.documentElement.lang = lang;
 			if (state.mode === 'edit') setState({ ...state, data: readForm() });
 			renderPage();

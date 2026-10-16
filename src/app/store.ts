@@ -4,23 +4,24 @@ import type { GroupData } from '../lib/sessions.ts';
 
 export const app = document.querySelector('#app') as HTMLElement;
 
-function readStoredLang(): string | null {
+function readStored(key: string): string | null {
 	try {
-		return localStorage.getItem('lang');
+		return localStorage.getItem(key);
 	} catch {
 		return null;
 	}
 }
 
-export function storeLang(lang: string) {
+export function writeStored(key: string, value: string | null) {
 	try {
-		localStorage.setItem('lang', lang);
+		if (value === null) localStorage.removeItem(key);
+		else localStorage.setItem(key, value);
 	} catch {
-		/* storage blocked — non-fatal */
+		/* storage blocked — the choice lasts for this page only */
 	}
 }
 
-export let locale: Locale = resolveLocale(navigator.language, readStoredLang());
+export let locale: Locale = resolveLocale(navigator.language, readStored('lang'));
 export function setLocale(next: Locale) {
 	locale = next;
 }
