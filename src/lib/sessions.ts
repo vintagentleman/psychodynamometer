@@ -76,7 +76,7 @@ export function parseSessions(inputs: SessionInput[], zone: string): Session[] {
 // strings, so this needs no timezone and is safe on malformed or partial rows.
 export function sortSessionInputs(sessions: SessionInput[]): SessionInput[] {
 	const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-	return [...sessions].sort(
+	return sessions.toSorted(
 		(a, b) => cmp(a.date, b.date) || cmp(a.start, b.start) || cmp(a.end, b.end),
 	);
 }
@@ -151,7 +151,7 @@ export function weekStartOf(date: PlainDate): PlainDate {
 // keyed to the group-zone civil date, so the bucketing is identical for every viewer.
 export function weeklyBuckets(sessions: Session[], nowMs: number): WeekBucket[] {
 	if (sessions.length === 0) return [];
-	const sorted = [...sessions].sort(byStart);
+	const sorted = sessions.toSorted(byStart);
 	const lastWeek = weekStartOf(sorted[sorted.length - 1].civilDate);
 	const buckets: WeekBucket[] = [];
 	for (
