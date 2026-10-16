@@ -41,9 +41,9 @@ export function buildIcs(group: GroupData, sessions: Session[], opts: IcsOptions
 export function icsFilename(title: string): string {
 	const dashed = title.trim().replace(/\s+/g, '-');
 	// `ch > ' '` drops C0 controls and space; DEL sorts above space, hence the escape.
-	const kept = Array.from(dashed)
+	const stem = Array.from(dashed)
 		.filter((ch) => ch > ' ' && ch !== '\u007F' && !'/\\:*?"<>|'.includes(ch))
+		.slice(0, 64)
 		.join('');
-	const stem = Array.from(kept).slice(0, 64).join('');
 	return stem === '' ? 'sessions' : stem;
 }

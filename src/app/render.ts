@@ -1,4 +1,4 @@
-import { messages, t } from '../i18n.ts';
+import { t } from '../i18n.ts';
 import {
 	civilDateInZone,
 	computeProgress,
@@ -33,17 +33,14 @@ import { pinnedTheme, pinScheme } from './theme.ts';
 function topbarFragment() {
 	const fragment = cloneTemplate('tpl-topbar');
 	for (const button of fragment.querySelectorAll('button.lang')) {
-		const lang = (button as HTMLElement).dataset.lang;
-		button.classList.toggle('active', locale === lang);
-		button.setAttribute('aria-pressed', String(locale === lang));
+		(button as HTMLElement).ariaPressed = String(locale === (button as HTMLElement).dataset.lang);
 	}
 	const pinned = pinnedTheme();
 	const pin = pinScheme();
 	for (const button of fragment.querySelectorAll('button.theme')) {
 		const active =
 			(button as HTMLElement).dataset.themeChoice === 'system' ? pinned === null : pinned !== null;
-		button.classList.toggle('active', active);
-		button.setAttribute('aria-pressed', String(active));
+		(button as HTMLElement).ariaPressed = String(active);
 	}
 	const pinButton = fragment.querySelector('button.theme[data-theme-choice="pin"]');
 	if (pinButton !== null) {
@@ -85,7 +82,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 	const nowMs = now.getTime();
 	const nowCivil = civilDateInZone(nowMs, zone);
 	const sessions = parseSessions(data.sessions, zone);
-	const { completedHours, upcomingHours, remainingHours, percent, scheduleDelta } = computeProgress(
+	const { completedHours, upcomingHours, remainingHours, scheduleDelta } = computeProgress(
 		sessions,
 		data.targetHours,
 		nowMs,
@@ -101,7 +98,8 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 		zoneTag.textContent = ` · ${formatOffsetTag(nowMs, zone, locale)}`;
 	}
 
-	const rounded = Math.round(percent);
+	const segments = progressSegments(completedHours, upcomingHours, data.targetHours);
+	const rounded = Math.round(segments.donePct);
 	slot(page, '.hero-value').textContent = `${rounded}%`;
 	let heroSide = ` · ${t(locale, 'remaining', { hours: formatHoursNum(remainingHours, locale) })}`;
 	const fillGap = Math.round(Math.abs(scheduleDelta) * 10) / 10;
@@ -110,13 +108,7 @@ function fillDerived(page: Element, data: GroupData, now: Date, mode: 'view' | '
 		heroSide += ` · ${t(locale, key, { hours: formatHoursNum(fillGap, locale) })}`;
 	}
 	slot(page, '.hero-side').textContent = heroSide;
-	const meter = slot(page, '.meter');
-	meter.setAttribute('role', 'progressbar');
-	meter.setAttribute('aria-label', t(locale, 'progress'));
-	meter.setAttribute('aria-valuemin', '0');
-	meter.setAttribute('aria-valuemax', '100');
-	meter.setAttribute('aria-valuenow', String(rounded));
-	const segments = progressSegments(completedHours, upcomingHours, data.targetHours);
+	slot(page, '.meter').ariaValueNow = String(rounded);
 	slot(page, '.meter-done').style.width = `${segments.donePct}%`;
 	slot(page, '.meter-upcoming').style.width = `${segments.upcomingPct}%`;
 	slot(page, '.meter-now').style.left = `${segments.donePct}%`;
@@ -213,9 +205,9 @@ function fillScheduleView(
 // refresh never rebuilds the target input, keeping its caret.
 function buildSubline(page: Element, targetHours: number, mode: 'view' | 'edit') {
 	const subline = slot(page, '.subline');
-	const template = messages[locale].headerHours ?? messages.en.headerHours ?? '';
 	subline.replaceChildren();
-	for (const part of template.split(/(\{completed\}|\{target\})/)) {
+	// t() leaves unfilled placeholders in place.
+	for (const part of t(locale, 'headerHours').split(/(\{completed\}|\{target\})/)) {
 		if (part === '{completed}') {
 			const span = document.createElement('span');
 			span.className = 'subline-completed';
@@ -255,84 +247,27 @@ export function renderPage() {
 	const page = cloneTemplate('tpl-page').firstElementChild as HTMLElement;
 	page.classList.toggle('editing', mode === 'edit');
 
-	const titleSlot = slot(page, '.title-slot');
+	for (const el of page.querySelectorAll(mode === 'view' ? '.edit-only' : '.view-only'))
+		el.remove();
+	if (data.sessions.length === 0) page.querySelector('#download-ics')?.remove();
+	if (typeof navigator.share !== 'function') page.querySelector('#share-link')?.remove();
+
 	if (mode === 'view') {
-		const h2 = document.createElement('h2');
-		h2.textContent = data.title;
-		titleSlot.appendChild(h2);
+		slot(page, '.masthead h2').textContent = data.title;
 	} else {
-		const input = document.createElement('input');
-		input.name = 'title';
-		input.className = 'title-input';
-		input.placeholder = t(locale, 'groupName');
-		input.value = data.title;
-		titleSlot.appendChild(input);
+		const title = slot(page, '.title-input') as HTMLInputElement;
+		title.placeholder = t(locale, 'groupName');
+		title.value = data.title;
+		const rows = data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
+		slot(page, '#rows').append(...rows.map(sessionRow));
+		slot(page, '#zone-select').append(
+			...zoneOptions(new Date().getTime()).map(
+				({ value, label }) => new Option(label, value, false, value === data.timeZone),
+			),
+		);
 	}
 
 	buildSubline(page, data.targetHours, mode);
-
-	const schedSlot = slot(page, '.schedule-slot');
-	if (mode === 'edit') {
-		const rows = data.sessions.length > 0 ? data.sessions : [{ date: '', start: '', end: '' }];
-		const list = document.createElement('div');
-		list.id = 'rows';
-		for (const input of rows) list.appendChild(sessionRow(input));
-		const add = document.createElement('button');
-		add.type = 'button';
-		add.className = 'ghost';
-		add.id = 'add-row';
-		add.textContent = t(locale, 'addSession');
-		const zoneField = document.createElement('div');
-		zoneField.className = 'zone-field';
-		const zoneSelect = document.createElement('select');
-		zoneSelect.id = 'zone-select';
-		zoneSelect.setAttribute('aria-label', t(locale, 'timeZone'));
-		for (const { value, label } of zoneOptions(new Date().getTime())) {
-			const opt = document.createElement('option');
-			opt.value = value;
-			opt.textContent = label;
-			if (value === data.timeZone) opt.selected = true;
-			zoneSelect.appendChild(opt);
-		}
-		const zoneHelp = document.createElement('p');
-		zoneHelp.className = 'zone-help';
-		zoneHelp.textContent = t(locale, 'timesInZone');
-		zoneField.append(zoneSelect, zoneHelp);
-		schedSlot.append(zoneField, list, add);
-	}
-
-	const copyBtn = document.createElement('button');
-	copyBtn.type = 'button';
-	copyBtn.id = 'copy-link';
-	copyBtn.textContent = t(locale, 'copyLink');
-	const actionButtons = [copyBtn];
-	if (mode === 'view' && data.sessions.length > 0) {
-		const calBtn = document.createElement('button');
-		calBtn.type = 'button';
-		calBtn.className = 'ghost';
-		calBtn.id = 'download-ics';
-		calBtn.textContent = t(locale, 'addToCalendar');
-		actionButtons.push(calBtn);
-	}
-	if (mode === 'view' && typeof navigator.share === 'function') {
-		const shareBtn = document.createElement('button');
-		shareBtn.type = 'button';
-		shareBtn.className = 'ghost';
-		shareBtn.id = 'share-link';
-		shareBtn.textContent = t(locale, 'shareLink');
-		actionButtons.push(shareBtn);
-	}
-	const toggle = document.createElement('button');
-	toggle.type = 'button';
-	toggle.className = 'ghost';
-	if (mode === 'view') {
-		toggle.id = 'edit';
-		toggle.textContent = t(locale, 'edit');
-	} else {
-		toggle.id = 'done';
-		toggle.textContent = t(locale, 'doneEditing');
-	}
-	slot(page, '.page-actions').prepend(...actionButtons, toggle);
 
 	if (mode === 'edit' && state.badLink) slot(page, '.note-badlink').hidden = false;
 

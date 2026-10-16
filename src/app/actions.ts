@@ -3,8 +3,6 @@ import {
 	encodabilityError,
 	encodeGroup,
 	formatHoursNum,
-	isBlankInput,
-	isComplete,
 	MAX_SESSIONS,
 	MAX_TARGET_HOURS,
 	parseSessions,
@@ -38,33 +36,26 @@ export function reportError(reason: 'rows' | 'target' | 'count') {
 }
 
 export function copyLink(copyButton: HTMLButtonElement) {
-	let cleaned: GroupData;
+	let group: GroupData | null;
 	if (state.mode === 'view') {
-		if (state.data === null) return;
-		cleaned = state.data;
+		group = state.data;
 	} else {
 		refreshComputed();
-		const draft = readForm();
-		let blocked = false;
+		// Stricter than markInvalidRows: a partly-filled row blocks the copy.
 		for (const row of app.querySelectorAll('#rows .row')) {
 			const r = readRow(row);
-			const bad = !r.blank && !r.valid;
-			markRow(row, bad);
-			blocked ||= bad;
+			markRow(row, !r.blank && !r.valid);
 		}
-		if (blocked) {
-			reportError('rows');
-			return;
-		}
+		const draft = readForm();
 		const reason = encodabilityError(draft);
 		if (reason !== null) {
 			reportError(reason);
 			return;
 		}
-		cleaned = { ...draft, sessions: draft.sessions.filter((s) => !isBlankInput(s)) };
-		if (!isComplete(cleaned)) return;
+		group = shareableGroup(draft);
 	}
-	const url = `${location.origin}${location.pathname}#d=${encodeGroup(cleaned)}`;
+	if (group === null) return;
+	const url = `${location.origin}${location.pathname}#d=${encodeGroup(group)}`;
 	if (!navigator.clipboard) {
 		showBuildError('copyFailed');
 		return;

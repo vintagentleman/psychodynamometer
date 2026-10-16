@@ -17,10 +17,7 @@ export function readRow(row: Element) {
 
 export function markRow(row: Element, invalid: boolean) {
 	row.classList.toggle('invalid', invalid);
-	for (const input of row.querySelectorAll('input')) {
-		if (invalid) input.setAttribute('aria-invalid', 'true');
-		else input.removeAttribute('aria-invalid');
-	}
+	for (const input of row.querySelectorAll('input')) input.ariaInvalid = invalid ? 'true' : null;
 }
 
 export function markInvalidRows() {
@@ -38,9 +35,7 @@ export function showBuildError(key: string, params: Record<string, string | numb
 
 export function markTarget(invalid: boolean) {
 	const target = app.querySelector('input[name="targetHours"]');
-	if (target === null) return;
-	if (invalid) target.setAttribute('aria-invalid', 'true');
-	else target.removeAttribute('aria-invalid');
+	if (target !== null) target.ariaInvalid = invalid ? 'true' : null;
 }
 
 export function clearBuildError() {

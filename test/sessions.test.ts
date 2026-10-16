@@ -158,18 +158,12 @@ test('computeProgress counts only ended sessions', () => {
 	const p = computeProgress(fixture, 10, Date.UTC(2026, 0, 10));
 	expect(p.completedHours).toBe(7);
 	expect(p.remainingHours).toBe(3);
-	expect(p.percent).toBe(70);
 });
 
-test('computeProgress overshoot: percent caps, real hours shown, remaining clamps', () => {
+test('computeProgress overshoot: real hours shown, remaining clamps', () => {
 	const p = computeProgress(fixture, 10, Date.UTC(2026, 1, 1));
 	expect(p.completedHours).toBe(12);
 	expect(p.remainingHours).toBe(0);
-	expect(p.percent).toBe(100);
-});
-
-test('computeProgress with zero target yields zero percent', () => {
-	expect(computeProgress(fixture, 0, Date.UTC(2026, 1, 1)).percent).toBe(0);
 });
 
 test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
@@ -177,14 +171,10 @@ test('computeProgress also reports upcoming (not-yet-ended) hours', () => {
 	expect(computeProgress(fixture, 10, Date.UTC(2026, 1, 1)).upcomingHours).toBe(0);
 });
 
-test('computeProgress reports planned hours and the signed schedule delta', () => {
+test('computeProgress reports the signed schedule delta', () => {
 	// fixture is 12 h planned (3 + 4 + 5)
-	const over = computeProgress(fixture, 10, Date.UTC(2026, 0, 10)); // 12 vs 10 -> over-fill
-	expect(over.plannedHours).toBe(12);
-	expect(over.scheduleDelta).toBe(-2);
-	const under = computeProgress(fixture, 15, Date.UTC(2026, 0, 10)); // 12 vs 15 -> under-fill
-	expect(under.plannedHours).toBe(12);
-	expect(under.scheduleDelta).toBe(3);
+	expect(computeProgress(fixture, 10, Date.UTC(2026, 0, 10)).scheduleDelta).toBe(-2); // over-fill
+	expect(computeProgress(fixture, 15, Date.UTC(2026, 0, 10)).scheduleDelta).toBe(3); // under-fill
 	expect(computeProgress(fixture, 12, Date.UTC(2026, 0, 10)).scheduleDelta).toBe(0); // exact
 });
 
@@ -196,6 +186,10 @@ test('progressSegments splits done / upcoming / unplanned against the target', (
 test('progressSegments clamps overshoot so the bar never exceeds 100%', () => {
 	expect(progressSegments(12, 0, 10)).toEqual({ donePct: 100, upcomingPct: 0 });
 	expect(progressSegments(7, 6, 10)).toEqual({ donePct: 70, upcomingPct: 30 });
+});
+
+test('progressSegments with zero target yields empty segments', () => {
+	expect(progressSegments(12, 0, 0)).toEqual({ donePct: 0, upcomingPct: 0 });
 });
 
 test('progressSegments is all zero with no target', () => {
@@ -319,11 +313,11 @@ test('weeklyBuckets keys weeks by the group-zone civil date, not the viewer', ()
 	expect([buckets[0].doneHours, buckets[0].upcomingHours]).toEqual([0, 2]);
 });
 
-test('nowWeekIndex finds the bucket that contains now, else null', () => {
+test('nowWeekIndex finds the bucket that contains now, else -1', () => {
 	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-06-10'))).toBe(1);
-	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-05-01'))).toBeNull();
-	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-08-01'))).toBeNull();
-	expect(nowWeekIndex([], Temporal.PlainDate.from('2026-06-10'))).toBeNull();
+	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-05-01'))).toBe(-1);
+	expect(nowWeekIndex(juneWeeks, Temporal.PlainDate.from('2026-08-01'))).toBe(-1);
+	expect(nowWeekIndex([], Temporal.PlainDate.from('2026-06-10'))).toBe(-1);
 });
 
 const draft = {

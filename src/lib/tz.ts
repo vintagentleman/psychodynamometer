@@ -49,9 +49,5 @@ export function zoneOptions(nowMs: number): { value: string; label: string }[] {
 }
 
 export function detectedZone(): string {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().timeZone;
-	} catch {
-		return 'UTC';
-	}
+	return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }

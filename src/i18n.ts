@@ -105,7 +105,7 @@ export function t(
 	key: string,
 	params: Record<string, string | number> = {},
 ): string {
-	const template = messages[locale][key] ?? messages.en[key] ?? key;
+	const template = messages[locale][key] ?? key;
 	return template.replace(/\{(\w+)\}/g, (match, name) =>
 		name in params ? String(params[name]) : match,
 	);

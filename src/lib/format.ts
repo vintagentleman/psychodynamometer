@@ -10,35 +10,25 @@ export function plainDateToLocalDate(date: PlainDate): Date {
 const toDate = (date: Date | PlainDate) =>
 	date instanceof Date ? date : plainDateToLocalDate(date);
 
+const dtf = (locale: string, options: Intl.DateTimeFormatOptions) =>
+	new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, options);
+
 export function formatDateShort(date: Date | PlainDate, locale: string) {
-	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
-		weekday: 'short',
-		day: 'numeric',
-		month: 'short',
-	}).format(toDate(date));
+	return dtf(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(toDate(date));
 }
 
 export function formatDateLong(date: Date | PlainDate, locale: string) {
-	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
-		weekday: 'long',
-		day: 'numeric',
-		month: 'long',
-	}).format(toDate(date));
+	return dtf(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(toDate(date));
 }
 
 export function formatMonth(date: PlainDate, locale: string) {
-	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, { month: 'short' }).format(
-		plainDateToLocalDate(date),
-	);
+	return dtf(locale, { month: 'short' }).format(plainDateToLocalDate(date));
 }
 
 // Monday-to-Sunday range of the week starting at weekStart, e.g. "17 – 23 Aug".
 export function formatWeekRange(weekStart: PlainDate, locale: string) {
 	const weekEnd = weekStart.add({ days: 6 });
-	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
-		day: 'numeric',
-		month: 'short',
-	})
+	return dtf(locale, { day: 'numeric', month: 'short' })
 		.formatRange(plainDateToLocalDate(weekStart), plainDateToLocalDate(weekEnd))
 		.replace(/\s/g, ' '); // ICU emits narrow no-break spaces; engines disagree
 }
@@ -53,7 +43,7 @@ export function formatHoursNum(hours: number, locale: string) {
 
 // The zone's UTC-offset tag at instant `ms`, e.g. "GMT+3", localised.
 export function formatOffsetTag(ms: number, zone: string, locale: string): string {
-	const parts = new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
+	const parts = dtf(locale, {
 		timeZone: zone,
 		timeZoneName: 'shortOffset',
 		hour: '2-digit',
@@ -69,9 +59,5 @@ export function formatRange(start: string, end: string, nextDay: boolean): strin
 
 // The instant `ms` as a clock time in the viewer's own local zone, "HH:MM".
 export function formatLocalTime(ms: number, locale: string): string {
-	return new Intl.DateTimeFormat(DATE_LOCALES[locale] ?? locale, {
-		hour: '2-digit',
-		minute: '2-digit',
-		hourCycle: 'h23',
-	}).format(new Date(ms));
+	return dtf(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ms));
 }

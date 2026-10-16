@@ -89,8 +89,6 @@ export function computeProgress(
 	completedHours: number;
 	upcomingHours: number;
 	remainingHours: number;
-	percent: number;
-	plannedHours: number;
 	scheduleDelta: number;
 } {
 	const completedHours = sessions
@@ -100,10 +98,8 @@ export function computeProgress(
 		.filter((session) => session.endZdt.epochMilliseconds > nowMs)
 		.reduce((sum, session) => sum + session.hours, 0);
 	const remainingHours = Math.max(0, targetHours - completedHours);
-	const percent = targetHours > 0 ? Math.min(100, (completedHours / targetHours) * 100) : 0;
-	const plannedHours = completedHours + upcomingHours;
-	const scheduleDelta = targetHours - plannedHours;
-	return { completedHours, upcomingHours, remainingHours, percent, plannedHours, scheduleDelta };
+	const scheduleDelta = targetHours - completedHours - upcomingHours;
+	return { completedHours, upcomingHours, remainingHours, scheduleDelta };
 }
 
 // Clamped so the stacked done + upcoming widths never exceed 100%.
@@ -129,15 +125,13 @@ export function cumulativePercents(sessions: Session[], targetHours: number): nu
 	});
 }
 
-// The in-progress session (started, not yet ended) counts as next, flagged inProgress.
+// The in-progress session (started, not yet ended) counts as next, flagged
+// inProgress. Pass a start-sorted list, as parseSessions returns.
 export function findNextSession(
 	sessions: Session[],
 	nowMs: number,
 ): { session: Session; inProgress: boolean } | null {
-	const upcoming = sessions
-		.filter((session) => session.endZdt.epochMilliseconds > nowMs)
-		.sort(byStart);
-	const session = upcoming[0];
+	const session = sessions.find((s) => s.endZdt.epochMilliseconds > nowMs);
 	if (session === undefined) return null;
 	return { session, inProgress: session.startZdt.epochMilliseconds <= nowMs };
 }
@@ -148,23 +142,18 @@ export function weekStartOf(date: PlainDate): PlainDate {
 }
 
 // Empty weeks stay in as zero-hour buckets (visible gaps). Week membership is
-// keyed to the group-zone civil date, so the bucketing is identical for every viewer.
+// keyed to the group-zone civil date, so the bucketing is identical for every
+// viewer. Pass a start-sorted list, as parseSessions returns.
 export function weeklyBuckets(sessions: Session[], nowMs: number): WeekBucket[] {
 	if (sessions.length === 0) return [];
-	const sorted = sessions.toSorted(byStart);
-	const lastWeek = weekStartOf(sorted[sorted.length - 1].civilDate);
+	const lastWeek = weekStartOf(sessions[sessions.length - 1].civilDate);
 	const buckets: WeekBucket[] = [];
 	for (
-		let weekStart = weekStartOf(sorted[0].civilDate);
+		let weekStart = weekStartOf(sessions[0].civilDate);
 		Temporal.PlainDate.compare(weekStart, lastWeek) <= 0;
 		weekStart = weekStart.add({ weeks: 1 })
 	) {
-		const weekEnd = weekStart.add({ weeks: 1 });
-		const inWeek = sorted.filter(
-			(s) =>
-				Temporal.PlainDate.compare(s.civilDate, weekStart) >= 0 &&
-				Temporal.PlainDate.compare(s.civilDate, weekEnd) < 0,
-		);
+		const inWeek = sessions.filter((s) => weekStartOf(s.civilDate).equals(weekStart));
 		buckets.push({
 			weekStart,
 			doneHours: inWeek
@@ -178,16 +167,9 @@ export function weeklyBuckets(sessions: Session[], nowMs: number): WeekBucket[] 
 	return buckets;
 }
 
-export function nowWeekIndex(buckets: WeekBucket[], nowCivil: PlainDate): number | null {
-	for (let i = 0; i < buckets.length; i++) {
-		const { weekStart } = buckets[i];
-		if (
-			Temporal.PlainDate.compare(nowCivil, weekStart) >= 0 &&
-			Temporal.PlainDate.compare(nowCivil, weekStart.add({ weeks: 1 })) < 0
-		)
-			return i;
-	}
-	return null;
+export function nowWeekIndex(buckets: WeekBucket[], nowCivil: PlainDate): number {
+	const nowWeek = weekStartOf(nowCivil);
+	return buckets.findIndex((b) => b.weekStart.equals(nowWeek));
 }
 
 export const isBlankInput = (s: SessionInput) => s.date === '' && s.start === '' && s.end === '';

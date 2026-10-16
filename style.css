@@ -37,6 +37,15 @@
 	outline-offset: 2px;
 }
 
+:where(input, select) {
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface);
+	color: var(--ink);
+	font: inherit;
+}
+
 body {
 	margin: 0;
 	padding: 16px;
@@ -146,7 +155,7 @@ button {
 		font-weight: 400;
 		font-size: 12px;
 
-		&.active {
+		&[aria-pressed='true'] {
 			background: var(--ink);
 			color: var(--surface);
 			font-weight: 600;
@@ -203,9 +212,8 @@ button {
 		width: 100%;
 		border: 0;
 		border-bottom: 1px dashed var(--hairline);
+		border-radius: 0;
 		background: none;
-		color: var(--ink);
-		font: inherit;
 		font-weight: 700;
 		font-size: 20px;
 	}
@@ -217,11 +225,6 @@ button {
 	& .target-input {
 		padding: 2px 6px;
 		width: 4.5em;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--surface);
-		color: var(--ink);
-		font: inherit;
 	}
 
 	& .note-badlink {
@@ -275,14 +278,6 @@ button {
 	overflow: hidden;
 	border-radius: var(--radius-bar);
 	background: var(--meter-track);
-
-	& .meter-done {
-		background: var(--viz-done);
-	}
-
-	& .meter-upcoming {
-		background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
-	}
 
 	& .meter-now {
 		position: absolute;
@@ -353,16 +348,6 @@ button {
 
 	& .seg {
 		width: 100%;
-
-		&.done {
-			background: var(--viz-done);
-		}
-
-		/* striped, not a second shade — reads under any display or color vision */
-
-		&.upcoming {
-			background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
-		}
 	}
 
 	& .seg:first-child {
@@ -411,15 +396,21 @@ button {
 		width: 13px;
 		height: 13px;
 		border-radius: 2px;
-
-		&.done {
-			background: var(--viz-done);
-		}
-
-		&.upcoming {
-			background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
-		}
 	}
+}
+
+.meter-done,
+.seg.done,
+.swatch.done {
+	background: var(--viz-done);
+}
+
+/* striped, not a second shade — reads under any display or color vision */
+
+.meter-upcoming,
+.seg.upcoming,
+.swatch.upcoming {
+	background: repeating-linear-gradient(45deg, var(--viz-done) 0 3px, transparent 3px 6px);
 }
 
 .sessions {
@@ -543,15 +534,6 @@ button {
 		gap: 6px;
 	}
 
-	& input {
-		padding: 8px 10px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--surface);
-		color: var(--ink);
-		font: inherit;
-	}
-
 	& .row {
 		display: flex;
 		gap: 6px;
@@ -584,13 +566,7 @@ button {
 	}
 
 	& #zone-select {
-		padding: 8px 10px;
 		width: 100%;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--surface);
-		color: var(--ink);
-		font: inherit;
 	}
 
 	& .zone-help {

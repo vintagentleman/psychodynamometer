@@ -129,14 +129,21 @@
 		<template id="tpl-page">
 			<article class="page">
 				<header class="masthead">
-					<div class="title-slot"></div>
+					<h2 class="view-only"></h2>
+					<input name="title" class="title-input edit-only" />
 					<p class="subline"></p>
 					<p class="note note-badlink" data-i18n="badLink" hidden></p>
 				</header>
 				<section class="block sec-progress">
 					<h2 class="label" data-i18n="progress"></h2>
 					<p class="hero"><span class="hero-value"></span><span class="hero-side"></span></p>
-					<div class="meter">
+					<div
+						class="meter"
+						role="progressbar"
+						aria-valuemin="0"
+						aria-valuemax="100"
+						data-i18n-aria="progress"
+					>
 						<div class="meter-done"></div>
 						<div class="meter-upcoming"></div>
 						<div class="meter-now"></div>
@@ -163,9 +170,36 @@
 				</section>
 				<section class="block sec-schedule">
 					<h2 class="label" data-i18n="schedule"></h2>
-					<div class="schedule-slot"></div>
+					<div class="schedule-slot">
+						<div class="zone-field edit-only">
+							<select id="zone-select" data-i18n-aria="timeZone"></select>
+							<p class="zone-help" data-i18n="timesInZone"></p>
+						</div>
+						<div id="rows" class="edit-only"></div>
+						<button
+							type="button"
+							class="ghost edit-only"
+							id="add-row"
+							data-i18n="addSession"
+						></button>
+					</div>
 				</section>
 				<footer class="page-actions">
+					<button type="button" id="copy-link" data-i18n="copyLink"></button>
+					<button
+						type="button"
+						class="ghost view-only"
+						id="download-ics"
+						data-i18n="addToCalendar"
+					></button>
+					<button
+						type="button"
+						class="ghost view-only"
+						id="share-link"
+						data-i18n="shareLink"
+					></button>
+					<button type="button" class="ghost view-only" id="edit" data-i18n="edit"></button>
+					<button type="button" class="ghost edit-only" id="done" data-i18n="doneEditing"></button>
 					<p class="note note-copyerror" role="status" hidden></p>
 				</footer>
 			</article>
