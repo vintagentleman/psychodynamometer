@@ -6,7 +6,9 @@
 
 Contracted hours vs hours done, the next session, weekly rhythm — computed in
 the browser from data carried in the link itself. No server, no accounts, no
-tracking. [**Live example**](https://vintagentleman.github.io/psychodynamometer/#d=AgBQCg1FdXJvcGUvTW9zY293NMKOlRg0yZYVkDTSjpWQNNmOlRg03o6VGDTwjpOwNPJDi0A0_JnVkDUEhxSgNQk8DwBTdW1tZXIgMjAyNg).
+tracking.
+
+[![Example group: progress, next session, weekly rhythm and schedule](.github/screenshot.png)](https://vintagentleman.github.io/psychodynamometer/#d=AgBQCg1FdXJvcGUvTW9zY293NSKOlRg1KZYVkDUyjpWQNTmOlRg1Po6VGDVQjpOwNVJDi0A1XJnVkDVkhxSgNWk8DwBBdXR1bW4gMjAyNg)
 
 ## Usage
 
