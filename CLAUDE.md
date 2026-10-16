@@ -10,9 +10,9 @@ minifies CSS.
 
 ## Hard rules
 
-- **Browser target: Baseline widely available**, declared in package.json
-  `browserslist` and enforced by lightningcss (down-levels modern CSS to that
-  floor). Temporal is used via feature detection: native where the engine
+- **Browser target: Baseline widely available** — Vite's default build
+  target, a snapshot each Vite release pins; Vite's lightningcss pass
+  down-levels modern CSS to it. Temporal is used via feature detection: native where the engine
   ships it, with `src/lib/temporal.ts` lazy-loading a polyfill where not. No
   other polyfills. Above-Baseline APIs are permitted only strictly
   feature-detected, never polyfilled and never required for core function —

@@ -1,8 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import browserslist from 'browserslist';
-import { browserslistToTargets } from 'lightningcss';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
@@ -36,13 +34,8 @@ function swManifest(): Plugin {
 
 export default defineConfig({
 	base: './',
-	css: {
-		transformer: 'lightningcss',
-		lightningcss: { targets: browserslistToTargets(browserslist()) },
-	},
+	css: { transformer: 'lightningcss' },
 	build: {
-		target: 'baseline-widely-available',
-		cssMinify: 'lightningcss',
 		rollupOptions: {
 			input: { index: 'index.html', sw: 'src/sw.ts' },
 			output: {
