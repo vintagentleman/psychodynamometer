@@ -34,6 +34,15 @@ test.describe('theme toggle', () => {
 		expect(pinnedBg).not.toBe(lightBg);
 	});
 
+	test('pinned light recolours the surface despite the dark system', async ({ page }) => {
+		await page.emulateMedia({ colorScheme: 'dark' });
+		await page.goto(url);
+		const darkBg = await page.$eval('.page', (el) => getComputedStyle(el).backgroundColor);
+		await page.click('button.theme-pin');
+		const pinnedBg = await page.$eval('.page', (el) => getComputedStyle(el).backgroundColor);
+		expect(pinnedBg).not.toBe(darkBg);
+	});
+
 	test('pin shows only the moon when representing dark', async ({ page }) => {
 		await page.goto(url);
 		const icons = await page.$eval('.theme-pin', (el) => {
