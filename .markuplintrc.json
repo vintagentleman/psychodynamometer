@@ -1,11 +1,7 @@
 {
 	"extends": ["markuplint:recommended"],
 	"excludeFiles": ["./.superpowers/**/*", "./dist/**/*"],
-	"overrides": {
-		"./index.html": {
-			"rules": {
-				"require-accessible-name": false
-			}
-		}
+	"rules": {
+		"require-accessible-name": false
 	}
 }
