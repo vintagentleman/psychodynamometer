@@ -28,11 +28,11 @@ Vite + TypeScript, no framework. Node >= 26.
 ```bash
 git clone https://github.com/vintagentleman/psychodynamometer.git
 cd psychodynamometer
-npm install
-npm run dev          # vite dev server
-npm run check        # the gate: typecheck + lint + format check + tests + build
-npm test             # unit tests (vitest)
-npm run test:e2e     # end-to-end suite (playwright)
+pnpm install
+pnpm dev          # vite dev server
+pnpm check        # the gate: typecheck + lint + format check + tests + build
+pnpm test         # unit tests (vitest)
+pnpm test:e2e     # end-to-end suite (playwright)
 ```
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org),

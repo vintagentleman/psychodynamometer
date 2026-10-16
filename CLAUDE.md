@@ -52,11 +52,11 @@ minifies CSS.
 
 ## Commands
 
-- `npm run check` — the gate: typecheck + lint (markuplint + stylelint +
+- `pnpm check` — the gate: typecheck + lint (markuplint + stylelint +
   eslint) + format check + tests (Vitest) + build.
-- `npm run dev` — Vite dev server.
-- `npm run build` — Vite build to `dist/` (gitignored, never committed).
-- `npm run preview` — serve the built `dist/` locally.
-- `npm test` — Vitest.
-- `npm run test:e2e` — Playwright suite in `e2e/`, over the built `dist/`
-  (needs `npx playwright install chromium` once per machine).
+- `pnpm dev` — Vite dev server.
+- `pnpm build` — Vite build to `dist/` (gitignored, never committed).
+- `pnpm preview` — serve the built `dist/` locally.
+- `pnpm test` — Vitest.
+- `pnpm test:e2e` — Playwright suite in `e2e/`, over the built `dist/`
+  (needs `pnpm exec playwright install chromium` once per machine).
